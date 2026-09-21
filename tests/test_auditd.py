@@ -29,6 +29,7 @@ def parse_fixture(name: str):
         "b64_only.rules",
         "both_arches.rules",
         "watch_space.rules",
+        "dir_watch.rules",
         "operators.rules",
         "unset_auid.rules",
         "unknown.rules",
@@ -100,6 +101,14 @@ def test_watch_with_spaces_is_desugared() -> None:
     assert values["perm"] == "wa"
     verdict, _ = evaluate_file_watch(result)
     assert verdict is Verdict.DEGRADED
+
+
+def test_directory_rule_is_path_scoped_file_coverage() -> None:
+    verdict, explanation = evaluate_file_watch(
+        parse_fixture("dir_watch.rules")
+    )
+    assert verdict is Verdict.DEGRADED
+    assert "1 target" in explanation
 
 
 def test_filter_operator_set() -> None:

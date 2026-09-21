@@ -223,7 +223,7 @@ def collect_native_policy(
 ) -> NativeAuditPolicy:
     try:
         return NativeAuditPolicy(query_system_policy(subcategory_guids))
-    except (OSError, PermissionError) as exc:
+    except OSError as exc:
         return NativeAuditPolicy(
             {},
             CollectionError(

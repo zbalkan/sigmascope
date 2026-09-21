@@ -21,19 +21,6 @@ def _host() -> dict[str, str]:
     }
 
 
-def _diagnostic(value: Diagnostic) -> dict[str, object]:
-    return {
-        "severity": value.severity,
-        "message": value.message,
-        "origin": asdict(value.origin),
-        "raw": value.raw,
-    }
-
-
-def _collection_error(value: CollectionError) -> dict[str, str]:
-    return asdict(value)
-
-
 def _evidence_from_rules(parsed: ParseResult) -> list[dict[str, str]]:
     return [
         {
@@ -223,7 +210,7 @@ def _run_windows(
         str(provider["channel"])
         for requirement in requirements
         for provider in requirement.get("providers", ())
-        if isinstance(provider, dict) and provider.get("channel")
+        if provider.get("channel")
     }
     channels = {name: get_channel_config(name) for name in channel_names}
     for config in channels.values():
@@ -330,6 +317,6 @@ def run(*, demo: bool = False) -> dict[str, object]:
         "layer": "generation",
         "host": host,
         "findings": findings,
-        "diagnostics": [_diagnostic(value) for value in diagnostics],
-        "collection_errors": [_collection_error(value) for value in errors],
+        "diagnostics": [asdict(value) for value in diagnostics],
+        "collection_errors": [asdict(value) for value in errors],
     }

@@ -211,23 +211,24 @@ def evaluate_file_watch(parsed: ParseResult) -> tuple[Verdict, str]:
             "auditd file watch rules are incomplete or could not be parsed safely.",
         )
 
-    watches = [
-        path.value
+    targets = [
+        target.value
         for rule in parsed.rules
         if rule.effect is Effect.INCLUDE
-        for path in _predicate(rule, "path")
-        if any(
+        for target in rule.predicates
+        if target.field in {"path", "dir"}
+        and any(
             "w" in permissions.value and "a" in permissions.value
             for permissions in _predicate(rule, "perm")
         )
     ]
-    if not watches:
+    if not targets:
         return (
             Verdict.NOT_COVERED,
             "No active auditd watch with write and attribute permissions was found.",
         )
     return (
         Verdict.DEGRADED,
-        f"auditd file monitoring is path-scoped ({len(watches)} watch path(s)); "
+        f"auditd file monitoring is path-scoped ({len(targets)} target(s)); "
         "generic file_event coverage is not global.",
     )
