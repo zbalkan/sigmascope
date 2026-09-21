@@ -110,7 +110,11 @@ def parse_auditpol_csv(source_id: str, data: str | bytes) -> ParseResult:
         )
 
     return ParseResult(
-        "unknown" if diagnostics else "effective",
+        (
+            "unknown"
+            if diagnostics or any(gate.value == "unknown" for gate in gates)
+            else "effective"
+        ),
         gates=tuple(gates),
         diagnostics=tuple(diagnostics),
     )
