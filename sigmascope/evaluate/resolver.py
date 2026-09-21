@@ -41,5 +41,5 @@ def resolve_provider_disjunction(
         "satisfied": verdict.satisfied,
         "explanation": explanation,
         "providers": providers,
-        "references": [str(requirement["reference"])],
+        "references": [str(value) for value in requirement["references"]],
     }

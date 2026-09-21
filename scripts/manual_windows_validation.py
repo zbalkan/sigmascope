@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 
 from sigmascope.collect.windows.auditpol_cli import collect_cli_policy
-from sigmascope.catalog import REQUIREMENTS
+from sigmascope.catalog import WINDOWS_MAPPINGS
 from sigmascope.collect.windows.auditpol_native import collect_native_policy
 
 
@@ -16,7 +16,7 @@ def main() -> int:
         sorted(
             {
                 str(provider["subcategory_guid"])
-                for requirement in REQUIREMENTS
+                for requirement in WINDOWS_MAPPINGS
                 for provider in requirement["providers"]
                 if provider.get("kind") == "windows_audit"
             }

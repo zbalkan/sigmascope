@@ -10,7 +10,8 @@ import sysconfig
 
 import pytest
 
-from sigmascope import load_catalog, run
+from sigmascope import run
+from sigmascope.catalog import CATALOG_VERSION, MAPPINGS_BY_OS
 
 
 PACKAGE = Path(__file__).parents[1] / "sigmascope"
@@ -78,8 +79,9 @@ def test_demo_report_validates_against_schema() -> None:
     jsonschema.Draft202012Validator(schema).validate(run(demo=True))
 
 
-def test_embedded_catalog_loads() -> None:
-    assert load_catalog()["catalog_version"] == "0.1.0"
+def test_embedded_mappings_are_versioned() -> None:
+    assert CATALOG_VERSION == "0.1.0"
+    assert sum(len(entries) for entries in MAPPINGS_BY_OS.values()) == 5
 
 
 def test_cli_demo_json() -> None:

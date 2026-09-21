@@ -6,7 +6,7 @@ import platform
 import socket
 from typing import Any
 
-from sigmascope.catalog import load_catalog
+from sigmascope.catalog import CATALOG_VERSION, MAPPINGS_BY_OS
 from sigmascope.collect.base import CollectionError
 from sigmascope.evaluate.auditd import evaluate_file_watch, evaluate_process_creation
 from sigmascope.evaluate.resolver import resolve_provider_disjunction
@@ -73,7 +73,7 @@ def _provider_result(
     }
 
 
-def _demo_report(catalog: dict[str, object]) -> dict[str, object]:
+def _demo_report() -> dict[str, object]:
     finding = {
         "logsource": {
             "category": "process_creation",
@@ -90,7 +90,7 @@ def _demo_report(catalog: dict[str, object]) -> dict[str, object]:
         "schema_version": "0.1",
         "generated_utc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "tool_version": __import__("sigmascope").__version__,
-        "catalog_version": str(catalog["catalog_version"]),
+        "catalog_version": CATALOG_VERSION,
         "layer": "generation",
         "host": _host(),
         "findings": [finding],
@@ -311,19 +311,12 @@ def _run_windows(
 
 
 def run(*, demo: bool = False) -> dict[str, object]:
-    catalog = load_catalog()
     if demo:
-        return _demo_report(catalog)
+        return _demo_report()
 
     host = _host()
     product = host["os"]
-    requirements = [
-        entry
-        for entry in catalog["requirements"]  # type: ignore[index]
-        if isinstance(entry, dict)
-        and isinstance(entry.get("logsource"), dict)
-        and entry["logsource"].get("product") == product
-    ]
+    requirements = list(MAPPINGS_BY_OS.get(product, ()))
 
     if product == "linux":
         findings, diagnostics, errors = _run_linux(requirements, host["arch"])
@@ -343,7 +336,7 @@ def run(*, demo: bool = False) -> dict[str, object]:
         "schema_version": "0.1",
         "generated_utc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "tool_version": __import__("sigmascope").__version__,
-        "catalog_version": str(catalog["catalog_version"]),
+        "catalog_version": CATALOG_VERSION,
         "layer": "generation",
         "host": host,
         "findings": findings,

@@ -4,7 +4,8 @@ import argparse
 import pkgutil
 import sys
 
-from sigmascope import __version__, load_catalog, run
+from sigmascope import __version__, run
+from sigmascope.catalog import CATALOG_VERSION
 from sigmascope.report.json_out import render_json
 from sigmascope.report.table_out import render_table
 
@@ -50,7 +51,7 @@ def main(argv: list[str] | None = None) -> int:
             sys.stdout.write("\n")
         return 0
     if args.print_catalog_version:
-        print(load_catalog()["catalog_version"])
+        print(CATALOG_VERSION)
         return 0
     try:
         report = run(demo=args.demo)

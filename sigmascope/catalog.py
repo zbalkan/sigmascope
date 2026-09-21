@@ -1,13 +1,16 @@
 from __future__ import annotations
 
-from typing import Any
-
 
 CATALOG_VERSION = "0.1.0"
 
-# POC mappings are deliberately compiled into the package. They are configuration,
-# not runtime-discovered data: sigmascope never downloads or loads mapping files.
-REQUIREMENTS: tuple[dict[str, Any], ...] = (
+_EVENTLOG_MAPPING = (
+    "https://github.com/nasbench/Eventlog_Compendium/blob/"
+    "0157a6bef8764781830d64a8f5170eedb65dfe3c/"
+    "data/audit_policy_category_to_event_mapping.json"
+)
+_SYSMON_REFERENCE = "https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon"
+
+WINDOWS_MAPPINGS = (
     {
         "logsource": {
             "category": "process_creation",
@@ -35,14 +38,12 @@ REQUIREMENTS: tuple[dict[str, Any], ...] = (
                 "channel": "Microsoft-Windows-Sysmon/Operational",
             },
         ),
-        "reference": (
+        "references": (
             "https://github.com/SigmaHQ/sigma/blob/"
             "2e8fd89f82d9104c1b30321a307254ddeea17de2/"
-            "documentation/logsource-guides/windows/category/process_creation.md"
-        ),
-        "source": (
-            "SigmaHQ/sigma@2e8fd89f82d9104c1b30321a307254ddeea17de2; "
-            "nasbench/Eventlog_Compendium@0157a6bef8764781830d64a8f5170eedb65dfe3c"
+            "documentation/logsource-guides/windows/category/process_creation.md",
+            _EVENTLOG_MAPPING,
+            _SYSMON_REFERENCE,
         ),
     },
     {
@@ -65,16 +66,7 @@ REQUIREMENTS: tuple[dict[str, Any], ...] = (
                 "channel": "Microsoft-Windows-Sysmon/Operational",
             },
         ),
-        "reference": (
-            "https://github.com/nasbench/Eventlog_Compendium/blob/"
-            "0157a6bef8764781830d64a8f5170eedb65dfe3c/"
-            "data/audit_policy_category_to_event_mapping.json"
-        ),
-        "source": (
-            "SigmaHQ/sigma@2e8fd89f82d9104c1b30321a307254ddeea17de2; "
-            "nasbench/Eventlog_Compendium@0157a6bef8764781830d64a8f5170eedb65dfe3c; "
-            "Microsoft Sysmon documentation"
-        ),
+        "references": (_EVENTLOG_MAPPING, _SYSMON_REFERENCE),
     },
     {
         "logsource": {
@@ -94,16 +86,11 @@ REQUIREMENTS: tuple[dict[str, Any], ...] = (
                 ),
             },
         ),
-        "reference": (
-            "https://github.com/nasbench/Eventlog_Compendium/blob/"
-            "0157a6bef8764781830d64a8f5170eedb65dfe3c/"
-            "data/audit_policy_category_to_event_mapping.json"
-        ),
-        "source": (
-            "SigmaHQ/sigma@2e8fd89f82d9104c1b30321a307254ddeea17de2; "
-            "nasbench/Eventlog_Compendium@0157a6bef8764781830d64a8f5170eedb65dfe3c"
-        ),
+        "references": (_EVENTLOG_MAPPING,),
     },
+)
+
+LINUX_MAPPINGS = (
     {
         "logsource": {
             "category": "process_creation",
@@ -117,8 +104,7 @@ REQUIREMENTS: tuple[dict[str, Any], ...] = (
                 "requirement": "process_creation",
             },
         ),
-        "reference": "https://man7.org/linux/man-pages/man8/auditctl.8.html",
-        "source": "Linux audit-userspace auditctl(8); Sigma logsource model",
+        "references": ("https://man7.org/linux/man-pages/man8/auditctl.8.html",),
     },
     {
         "logsource": {
@@ -133,14 +119,11 @@ REQUIREMENTS: tuple[dict[str, Any], ...] = (
                 "requirement": "file_watch",
             },
         ),
-        "reference": "https://man7.org/linux/man-pages/man7/audit.rules.7.html",
-        "source": "Linux audit-userspace audit.rules(7); Sigma logsource model",
+        "references": ("https://man7.org/linux/man-pages/man7/audit.rules.7.html",),
     },
 )
 
-
-def load_catalog() -> dict[str, object]:
-    return {
-        "catalog_version": CATALOG_VERSION,
-        "requirements": list(REQUIREMENTS),
-    }
+MAPPINGS_BY_OS = {
+    "windows": WINDOWS_MAPPINGS,
+    "linux": LINUX_MAPPINGS,
+}

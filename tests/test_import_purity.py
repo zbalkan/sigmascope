@@ -26,8 +26,9 @@ socket.socket.connect = blocked
 socket.socket.connect_ex = blocked
 
 import sigmascope
-catalog = sigmascope.load_catalog()
-assert catalog["catalog_version"] == "0.1.0"
+from sigmascope.catalog import CATALOG_VERSION, MAPPINGS_BY_OS
+assert CATALOG_VERSION == "0.1.0"
+assert MAPPINGS_BY_OS
 """
     env = dict(os.environ)
     env["PYTHONDONTWRITEBYTECODE"] = "1"

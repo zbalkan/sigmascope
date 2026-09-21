@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sigmascope import load_catalog
+from sigmascope.catalog import MAPPINGS_BY_OS
 from sigmascope.collect.windows.channels import ChannelConfig
 from sigmascope.evaluate.resolver import resolve_provider_disjunction
 from sigmascope.evaluate.sysmon import evaluate_event_type
@@ -14,13 +14,14 @@ from sigmascope.parse.sysmon_current import parse_sysmon_current
 FIXTURES = Path(__file__).parent / "fixtures" / "sysmon"
 
 
-def test_catalog_has_exactly_five_sourced_poc_entries() -> None:
-    catalog = load_catalog()
-    requirements = catalog["requirements"]
-    assert len(requirements) == 5
-    for entry in requirements:
-        assert entry["reference"]
-        assert entry["source"]
+def test_mapping_configuration_has_exactly_five_sourced_entries() -> None:
+    mappings = tuple(
+        entry
+        for entries in MAPPINGS_BY_OS.values()
+        for entry in entries
+    )
+    assert len(mappings) == 5
+    assert all(entry["references"] for entry in mappings)
 
 
 def test_sysmon_current_config_effective_network_gate_wins() -> None:
@@ -129,7 +130,7 @@ def test_file_system_audit_remains_indeterminate_without_sacl() -> None:
 def test_provider_disjunction_prefers_covered_then_degraded() -> None:
     requirement = {
         "logsource": {"category": "x", "product": "windows"},
-        "reference": "https://example.invalid/source",
+        "references": ("https://example.invalid/source",)
     }
     providers = [
         {"source_id": "a", "verdict": "not_covered", "explanation": "off"},
@@ -141,7 +142,7 @@ def test_provider_disjunction_prefers_covered_then_degraded() -> None:
 def test_provider_disjunction_prefers_indeterminate_over_degraded() -> None:
     requirement = {
         "logsource": {"category": "x", "product": "windows"},
-        "reference": "https://example.invalid/source",
+        "references": ("https://example.invalid/source",)
     }
     providers = [
         {"source_id": "a", "verdict": "degraded", "explanation": "partial"},
