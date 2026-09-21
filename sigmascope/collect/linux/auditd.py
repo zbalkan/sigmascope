@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import shutil
 import subprocess
 
 from sigmascope.model import CollectionError
@@ -8,13 +9,17 @@ from sigmascope.model import CollectionError
 
 @dataclass(frozen=True)
 class AuditdCollection:
+    installed: bool
     effective_rules: str | None
     status: str | None
     errors: tuple[CollectionError, ...]
 
 
-def _auditctl(*args: str) -> tuple[str | None, CollectionError | None]:
-    command = ("auditctl", *args)
+def _auditctl(
+    executable: str,
+    *args: str,
+) -> tuple[str | None, CollectionError | None]:
+    command = (executable, *args)
     try:
         proc = subprocess.run(
             command,
@@ -34,11 +39,15 @@ def _auditctl(*args: str) -> tuple[str | None, CollectionError | None]:
 
 
 def collect_auditd() -> AuditdCollection:
+    executable = shutil.which("auditctl")
+    if executable is None:
+        return AuditdCollection(False, None, None, ())
+
     errors: list[CollectionError] = []
-    rules, error = _auditctl("-l")
+    rules, error = _auditctl(executable, "-l")
     if error is not None:
         errors.append(error)
-    status, error = _auditctl("-s")
+    status, error = _auditctl(executable, "-s")
     if error is not None:
         errors.append(error)
-    return AuditdCollection(rules, status, tuple(errors))
+    return AuditdCollection(True, rules, status, tuple(errors))

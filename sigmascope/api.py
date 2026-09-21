@@ -113,21 +113,40 @@ def _run_linux(
         (gate.value for gate in status.gates if gate.key == "auditd.enabled"),
         None,
     )
+    pid = next(
+        (gate.value for gate in status.gates if gate.key == "auditd.pid"),
+        None,
+    )
     findings: list[dict[str, Any]] = []
     for requirement in requirements:
         provider_outputs: list[dict[str, Any]] = []
         for provider in requirement["providers"]:
             if provider.get("kind") != "auditd":
                 continue
-            if collection.effective_rules is None or status.determinacy == "unknown":
+            if not collection.installed:
                 verdict, explanation = (
-                    Verdict.INDETERMINATE,
-                    "Effective auditd rules or daemon status could not be collected.",
+                    Verdict.NOT_COVERED,
+                    "auditd is not installed (auditctl was not found).",
                 )
             elif enabled == 0:
                 verdict, explanation = (
                     Verdict.NOT_COVERED,
-                    "The Linux audit subsystem reports auditing disabled.",
+                    "auditd is installed, but the Linux audit subsystem is disabled.",
+                )
+            elif pid == 0:
+                verdict, explanation = (
+                    Verdict.NOT_COVERED,
+                    "auditd is installed, but the auditd daemon is not running.",
+                )
+            elif status.determinacy == "unknown" or enabled is None or pid is None:
+                verdict, explanation = (
+                    Verdict.INDETERMINATE,
+                    "auditd is installed, but its runtime state could not be determined.",
+                )
+            elif collection.effective_rules is None:
+                verdict, explanation = (
+                    Verdict.INDETERMINATE,
+                    "auditd is installed and running, but its effective rules could not be read.",
                 )
             elif provider.get("requirement") == "process_creation":
                 verdict, explanation = evaluate_process_creation(parsed, machine_arch=arch)
@@ -143,7 +162,7 @@ def _run_linux(
                     str(provider["source_id"]),
                     verdict,
                     explanation,
-                    _evidence_from_rules(parsed),
+                    _evidence_from_gates(status.gates) + _evidence_from_rules(parsed),
                 )
             )
         findings.append(resolve_provider_disjunction(requirement, provider_outputs))

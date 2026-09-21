@@ -4,6 +4,9 @@ from pathlib import Path
 
 import pytest
 
+import sigmascope.api as api
+import sigmascope.collect.linux.auditd as auditd_collect
+from sigmascope.catalog import LINUX_MAPPINGS
 from sigmascope.evaluate.auditd import (
     evaluate_file_watch,
     evaluate_process_creation,
@@ -161,8 +164,9 @@ def test_status_parser() -> None:
         "auditctl -s",
         (FIXTURES / "status.txt").read_text(),
     )
-    assert result.gates[0].key == "auditd.enabled"
-    assert result.gates[0].value == 1
+    gates = {gate.key: gate.value for gate in result.gates}
+    assert gates["auditd.enabled"] == 1
+    assert gates["auditd.pid"] == 827
 
 
 def test_scoped_never_task_degrades_process_coverage() -> None:
@@ -179,3 +183,64 @@ def test_unconditional_never_task_disables_process_coverage() -> None:
     )
     assert verdict is Verdict.NOT_COVERED
     assert "skip syscall-rule processing" in explanation
+
+
+def test_auditd_missing_is_not_covered(monkeypatch) -> None:
+    monkeypatch.setattr(
+        auditd_collect,
+        "collect_auditd",
+        lambda: auditd_collect.AuditdCollection(False, None, None, ()),
+    )
+    findings, _, _ = api._run_linux(list(LINUX_MAPPINGS), "x86_64")
+    assert all(item["verdict"] == "not_covered" for item in findings)
+    assert all("not installed" in item["explanation"] for item in findings)
+
+
+def test_auditd_disabled_is_not_covered(monkeypatch) -> None:
+    monkeypatch.setattr(
+        auditd_collect,
+        "collect_auditd",
+        lambda: auditd_collect.AuditdCollection(
+            True,
+            "",
+            "enabled 0\npid 827\n",
+            (),
+        ),
+    )
+    findings, _, _ = api._run_linux(list(LINUX_MAPPINGS), "x86_64")
+    assert all(item["verdict"] == "not_covered" for item in findings)
+    assert all("installed" in item["explanation"] for item in findings)
+    assert all("disabled" in item["explanation"] for item in findings)
+
+
+def test_auditd_daemon_stopped_is_not_covered(monkeypatch) -> None:
+    monkeypatch.setattr(
+        auditd_collect,
+        "collect_auditd",
+        lambda: auditd_collect.AuditdCollection(
+            True,
+            "",
+            "enabled 1\npid 0\n",
+            (),
+        ),
+    )
+    findings, _, _ = api._run_linux(list(LINUX_MAPPINGS), "x86_64")
+    assert all(item["verdict"] == "not_covered" for item in findings)
+    assert all("not running" in item["explanation"] for item in findings)
+
+
+def test_auditd_inaccessible_remains_indeterminate(monkeypatch) -> None:
+    monkeypatch.setattr(
+        auditd_collect,
+        "collect_auditd",
+        lambda: auditd_collect.AuditdCollection(
+            True,
+            None,
+            None,
+            (),
+        ),
+    )
+    findings, _, _ = api._run_linux(list(LINUX_MAPPINGS), "x86_64")
+    assert all(item["verdict"] == "indeterminate" for item in findings)
+    assert all("installed" in item["explanation"] for item in findings)
+    assert all("could not be determined" in item["explanation"] for item in findings)

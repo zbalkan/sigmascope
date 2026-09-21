@@ -9,30 +9,48 @@ def parse_auditd_status(source_id: str, data: str | bytes) -> ParseResult:
         if isinstance(data, bytes)
         else data
     )
+    values: dict[str, tuple[int, Origin]] = {}
+    diagnostics: list[Diagnostic] = []
+
     for line_number, line in enumerate(text.splitlines(), start=1):
-        key, separator, value = line.strip().partition(" ")
-        if key != "enabled":
+        key, separator, raw = line.strip().partition(" ")
+        if key not in {"enabled", "pid"}:
             continue
         origin = Origin(source_id, f"line {line_number}")
         if not separator:
-            break
+            diagnostics.append(
+                Diagnostic("warn", f"auditctl -s {key} has no value", origin, line)
+            )
+            continue
         try:
-            enabled = int(value.split()[0])
+            values[key] = (int(raw.split()[0]), origin)
         except (ValueError, IndexError):
-            break
-        return ParseResult(
-            "effective",
-            gates=(Gate("auditd.enabled", enabled, origin),),
+            diagnostics.append(
+                Diagnostic(
+                    "warn",
+                    f"auditctl -s {key} is not numeric",
+                    origin,
+                    line,
+                )
+            )
+
+    gates = tuple(
+        Gate(f"auditd.{key}", value, origin)
+        for key, (value, origin) in values.items()
+    )
+    missing = [key for key in ("enabled", "pid") if key not in values]
+    if missing:
+        diagnostics.append(
+            Diagnostic(
+                "error",
+                "auditctl -s did not contain valid " + " and ".join(missing),
+                Origin(source_id, "output"),
+                text,
+            )
         )
 
     return ParseResult(
-        "unknown",
-        diagnostics=(
-            Diagnostic(
-                "error",
-                "auditctl -s did not contain a valid enabled state",
-                Origin(source_id, "output"),
-                text,
-            ),
-        ),
+        "unknown" if diagnostics else "effective",
+        gates=gates,
+        diagnostics=tuple(diagnostics),
     )
