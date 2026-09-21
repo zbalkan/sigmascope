@@ -20,7 +20,6 @@ REQUIREMENTS: tuple[dict[str, Any], ...] = (
                 "subcategory_guid": "{0CCE922B-69AE-11D9-BED3-505054503030}",
                 "required_states": ("success", "both"),
                 "channel": "Security",
-                "provider_guid": "{54849625-5478-4994-A5BA-3E3B0328C30D}",
                 "field_gate": {
                     "key": "windows.process_creation.include_command_line",
                     "explanation": (
@@ -34,7 +33,6 @@ REQUIREMENTS: tuple[dict[str, Any], ...] = (
                 "source_id": "sysmon",
                 "event_type": "ProcessCreate",
                 "channel": "Microsoft-Windows-Sysmon/Operational",
-                "provider_guid": "{5770385F-C22A-43E0-BF4C-06F5698FFBD9}",
             },
         ),
         "reference": (
@@ -59,14 +57,12 @@ REQUIREMENTS: tuple[dict[str, Any], ...] = (
                 "subcategory_guid": "{0CCE9226-69AE-11D9-BED3-505054503030}",
                 "required_states": ("success", "both"),
                 "channel": "Security",
-                "provider_guid": "{54849625-5478-4994-A5BA-3E3B0328C30D}",
             },
             {
                 "kind": "sysmon",
                 "source_id": "sysmon",
                 "event_type": "NetworkConnect",
                 "channel": "Microsoft-Windows-Sysmon/Operational",
-                "provider_guid": "{5770385F-C22A-43E0-BF4C-06F5698FFBD9}",
             },
         ),
         "reference": (
@@ -92,7 +88,6 @@ REQUIREMENTS: tuple[dict[str, Any], ...] = (
                 "subcategory_guid": "{0CCE921D-69AE-11D9-BED3-505054503030}",
                 "required_states": ("success", "both"),
                 "channel": "Security",
-                "provider_guid": "{54849625-5478-4994-A5BA-3E3B0328C30D}",
                 "necessary_but_insufficient": (
                     "Object Access File System auditing also requires an applicable "
                     "SACL on each target object. The POC does not evaluate SACLs."

@@ -15,23 +15,10 @@ def evaluate_windows_audit(
     audit_policy: ParseResult,
     registry: ParseResult,
     channel: ChannelConfig,
-    provider_present: bool | None,
 ) -> tuple[Verdict, str, tuple[Gate, ...]]:
     guid = str(provider["subcategory_guid"]).upper()
     key = f"windows.audit.{guid}"
 
-    if provider_present is False:
-        return (
-            Verdict.NOT_COVERED,
-            f"Required Windows event provider {provider['provider_guid']} is not registered.",
-            (),
-        )
-    if provider_present is None:
-        return (
-            Verdict.INDETERMINATE,
-            "Required Windows event-provider registration could not be determined.",
-            (),
-        )
     if channel.error is not None or channel.enabled is None:
         return (
             Verdict.INDETERMINATE,
@@ -94,6 +81,6 @@ def evaluate_windows_audit(
 
     return (
         Verdict.COVERED,
-        f"Audit subcategory {guid} is enabled and its channel/provider gates are present.",
+        f"Audit subcategory {guid} is enabled and its channel gate is enabled.",
         tuple(evidence),
     )

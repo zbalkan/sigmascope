@@ -209,7 +209,7 @@ def _run_windows(
     requirements: list[dict[str, Any]],
 ) -> tuple[list[dict[str, Any]], list[Diagnostic], list[CollectionError]]:
     from sigmascope.collect.windows.channels import get_channel_config
-    from sigmascope.collect.windows.registry import collect_registry_gates, provider_registered
+    from sigmascope.collect.windows.registry import collect_registry_gates
     from sigmascope.collect.windows.sysmon import collect_sysmon
     from sigmascope.evaluate.sysmon import evaluate_event_type
     from sigmascope.evaluate.windows_gates import evaluate_windows_audit
@@ -235,19 +235,6 @@ def _run_windows(
         if config.error is not None:
             errors.append(config.error)
 
-    provider_guids = {
-        str(provider["provider_guid"])
-        for requirement in requirements
-        for provider in requirement.get("providers", ())
-        if isinstance(provider, dict) and provider.get("provider_guid")
-    }
-    provider_presence: dict[str, bool | None] = {}
-    for guid in provider_guids:
-        present, error = provider_registered(guid)
-        provider_presence[guid] = present
-        if error is not None:
-            errors.append(error)
-
     sysmon_parsed: ParseResult | None = None
     if sysmon.current_config is not None:
         sysmon_parsed = parse_sysmon_current("sysmon -c", sysmon.current_config)
@@ -265,7 +252,6 @@ def _run_windows(
                     audit_policy,
                     registry,
                     channel,
-                    provider_presence.get(str(provider["provider_guid"])),
                 )
                 provider_outputs.append(
                     _provider_result(
@@ -277,14 +263,7 @@ def _run_windows(
                     )
                 )
             elif kind == "sysmon":
-                if provider_presence.get(str(provider["provider_guid"])) is False:
-                    verdict, explanation, determinacy = (
-                        Verdict.NOT_COVERED,
-                        "The Sysmon event provider is not registered.",
-                        "effective",
-                    )
-                    evidence: list[dict[str, str]] = []
-                elif sysmon.running is False:
+                if sysmon.running is False:
                     verdict, explanation, determinacy = (
                         Verdict.NOT_COVERED,
                         "The Sysmon service is not installed or is not running.",

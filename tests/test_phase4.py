@@ -59,7 +59,6 @@ def test_windows_process_command_line_gate_degrades_security_provider() -> None:
         "subcategory_guid": "{0CCE922B-69AE-11D9-BED3-505054503030}",
         "required_states": ["success", "both"],
         "channel": "Security",
-        "provider_guid": "{54849625-5478-4994-A5BA-3E3B0328C30D}",
         "field_gate": {
             "key": "windows.process_creation.include_command_line",
             "explanation": "command line disabled",
@@ -94,7 +93,6 @@ def test_windows_process_command_line_gate_degrades_security_provider() -> None:
         audit,
         registry,
         ChannelConfig(True),
-        True,
     )
     assert verdict is Verdict.DEGRADED
 
@@ -104,7 +102,6 @@ def test_file_system_audit_remains_indeterminate_without_sacl() -> None:
         "subcategory_guid": "{0CCE921D-69AE-11D9-BED3-505054503030}",
         "required_states": ["success", "both"],
         "channel": "Security",
-        "provider_guid": "{54849625-5478-4994-A5BA-3E3B0328C30D}",
         "necessary_but_insufficient": "SACL not evaluated",
     }
     audit = ParseResult(
@@ -124,7 +121,6 @@ def test_file_system_audit_remains_indeterminate_without_sacl() -> None:
         audit,
         ParseResult("registry", "effective"),
         ChannelConfig(True),
-        True,
     )
     assert verdict is Verdict.INDETERMINATE
     assert "SACL" in explanation
