@@ -5,7 +5,7 @@ import subprocess
 import sys
 
 
-def test_import_and_catalog_load_make_no_network_or_write_calls() -> None:
+def test_import_and_mapping_access_make_no_network_or_write_calls() -> None:
     script = r"""
 import builtins
 import socket
@@ -14,11 +14,11 @@ original_open = builtins.open
 
 def guarded_open(file, mode="r", *args, **kwargs):
     if any(flag in mode for flag in ("w", "a", "x", "+")):
-        raise RuntimeError(f"write attempted during import/catalog load: {file}")
+        raise RuntimeError(f"write attempted during import/mapping access: {file}")
     return original_open(file, mode, *args, **kwargs)
 
 def blocked(*args, **kwargs):
-    raise RuntimeError("network attempted during import/catalog load")
+    raise RuntimeError("network attempted during import/mapping access")
 
 builtins.open = guarded_open
 socket.create_connection = blocked

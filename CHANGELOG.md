@@ -8,7 +8,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 ### Added
 - Python 3.9 through 3.14 support, with CI coverage across every supported minor version.
-- Read-only Windows advanced-audit-policy, channel, registry, provider, and Sysmon collectors.
+- Read-only Windows advanced-audit-policy, channel, registry, and Sysmon collectors.
 - Effective Sysmon current-configuration and auditd parsers with conservative diagnostics.
 - Five-entry, source-pinned POC Sigma logsource mapping configuration compiled into the package.
 - Provider-disjunction resolver and generation-layer JSON/table reports.
