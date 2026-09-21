@@ -42,10 +42,17 @@ POC deliberately does not inspect target-object SACLs.
 
 ## Conservative semantics
 
-Parser gaps and privilege failures resolve to INDETERMINATE. Linux coverage is based on
-effective auditctl -l output, not declared rule files. Sysmon is evaluated from the
-read-only sysmon -c current-configuration dump. The compiled Sysmon Rules registry blob is
-never parsed.
+Known source absence or disablement resolves to NOT_COVERED rather than INDETERMINATE.
+For auditd this distinguishes not installed, kernel auditing disabled, daemon stopped,
+and installed-but-unreadable state. For Sysmon it distinguishes not installed, service
+stopped, service state inaccessible, running-but-unreadable configuration, and a disabled
+Operational channel. Windows Security auditing distinguishes disabled channels or audit
+subcategories from policy state that cannot be read.
+
+Parser gaps, privilege failures, and other cases where source state cannot be inspected
+resolve to INDETERMINATE. Linux coverage is based on effective auditctl -l output, not
+declared rule files. Sysmon is evaluated from the read-only sysmon -c
+current-configuration dump. The compiled Sysmon Rules registry blob is never parsed.
 
 Sysmon assumptions V1-V2 remain explicit in fixtures and explanations until they are
 verified on a live host. Mixed include/exclude precedence follows Microsoft documentation.

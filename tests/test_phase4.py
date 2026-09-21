@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import sigmascope.api as api
+import sigmascope.collect.windows.sysmon as sysmon_collect
 from sigmascope.catalog import MAPPINGS_BY_OS
 from sigmascope.collect.windows.channels import ChannelConfig
 from sigmascope.evaluate.resolver import resolve_provider_disjunction
@@ -189,3 +191,67 @@ def test_windows_security_unreadable_policy_is_indeterminate() -> None:
     )
     assert verdict is Verdict.INDETERMINATE
     assert "effective audit policy could not be determined" in explanation
+
+
+def test_sysmon_absent_provider_reports_not_installed(monkeypatch) -> None:
+    monkeypatch.setattr(
+        sysmon_collect,
+        "collect_sysmon",
+        lambda: sysmon_collect.SysmonCollection(False, False, None, ()),
+    )
+    requirement = {
+        "logsource": {"category": "process_creation", "product": "windows"},
+        "providers": (
+            {
+                "kind": "sysmon",
+                "source_id": "sysmon",
+                "event_type": "ProcessCreate",
+                "channel": "Microsoft-Windows-Sysmon/Operational",
+            },
+        ),
+        "references": ("https://example.invalid/sysmon",),
+    }
+    findings, _, _ = api._run_windows([requirement])
+    assert findings[0]["verdict"] == "not_covered"
+    assert findings[0]["providers"][0]["explanation"] == "Sysmon is not installed."
+
+
+def test_sysmon_stopped_provider_reports_installed_but_stopped(monkeypatch) -> None:
+    monkeypatch.setattr(
+        sysmon_collect,
+        "collect_sysmon",
+        lambda: sysmon_collect.SysmonCollection(True, False, None, ()),
+    )
+    requirement = {
+        "logsource": {"category": "process_creation", "product": "windows"},
+        "providers": (
+            {
+                "kind": "sysmon",
+                "source_id": "sysmon",
+                "event_type": "ProcessCreate",
+                "channel": "Microsoft-Windows-Sysmon/Operational",
+            },
+        ),
+        "references": ("https://example.invalid/sysmon",),
+    }
+    findings, _, _ = api._run_windows([requirement])
+    assert findings[0]["verdict"] == "not_covered"
+    assert "installed" in findings[0]["providers"][0]["explanation"]
+    assert "not running" in findings[0]["providers"][0]["explanation"]
+
+
+def test_windows_security_disabled_channel_is_not_covered() -> None:
+    provider = {
+        "subcategory_guid": "{0CCE922B-69AE-11D9-BED3-505054503030}",
+        "required_states": ["success", "both"],
+        "channel": "Security",
+    }
+    verdict, explanation, _ = evaluate_windows_audit(
+        provider,
+        ParseResult("effective"),
+        ParseResult("effective"),
+        ChannelConfig(False),
+    )
+    assert verdict is Verdict.NOT_COVERED
+    assert "present" in explanation
+    assert "disabled" in explanation
