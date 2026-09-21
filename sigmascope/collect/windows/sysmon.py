@@ -104,7 +104,7 @@ def _service_image_path(name: str) -> str | None:
         return None
     import winreg
 
-    path = rf"SYSTEMCurrentControlSetServices{name}"
+    path = rf"SYSTEM\\CurrentControlSet\\Services\\{name}"
     try:
         with winreg.OpenKey(
             winreg.HKEY_LOCAL_MACHINE,
