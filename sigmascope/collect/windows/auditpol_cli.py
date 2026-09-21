@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import subprocess
 import sys
 
-from sigmascope.collect.base import CollectionError
+from sigmascope.model import CollectionError
 from sigmascope.model import ParseResult
 from sigmascope.parse.auditpol_csv import parse_auditpol_csv
 

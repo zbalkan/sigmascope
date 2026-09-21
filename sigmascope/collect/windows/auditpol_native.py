@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import sys
 import uuid
 
-from sigmascope.collect.base import CollectionError
+from sigmascope.model import CollectionError
 
 
 class GUID(ctypes.Structure):

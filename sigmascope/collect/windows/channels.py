@@ -5,7 +5,7 @@ from ctypes import wintypes
 from dataclasses import dataclass
 import sys
 
-from sigmascope.collect.base import CollectionError
+from sigmascope.model import CollectionError
 
 
 EVT_CHANNEL_CONFIG_ENABLED = 0

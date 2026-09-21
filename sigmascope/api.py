@@ -7,10 +7,9 @@ import socket
 from typing import Any
 
 from sigmascope.catalog import CATALOG_VERSION, MAPPINGS_BY_OS
-from sigmascope.collect.base import CollectionError
 from sigmascope.evaluate.auditd import evaluate_file_watch, evaluate_process_creation
 from sigmascope.evaluate.resolver import resolve_provider_disjunction
-from sigmascope.model import Diagnostic, Gate, Origin, ParseResult, Verdict
+from sigmascope.model import CollectionError, Diagnostic, Gate, Origin, ParseResult, Verdict
 
 
 def _host() -> dict[str, str]:

@@ -6,6 +6,13 @@ from typing import Literal, NamedTuple, Union
 
 
 @dataclass(frozen=True)
+class CollectionError:
+    source_id: str
+    message: str
+    resource: str = ""
+
+
+@dataclass(frozen=True)
 class Origin:
     resource: str
     locator: str

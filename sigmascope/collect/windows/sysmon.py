@@ -8,7 +8,7 @@ import subprocess
 import sys
 from dataclasses import dataclass
 
-from sigmascope.collect.base import CollectionError
+from sigmascope.model import CollectionError
 
 
 @dataclass(frozen=True)

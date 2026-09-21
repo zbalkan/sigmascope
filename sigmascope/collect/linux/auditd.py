@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import subprocess
 
-from sigmascope.collect.base import CollectionError
+from sigmascope.model import CollectionError
 
 
 @dataclass(frozen=True)
