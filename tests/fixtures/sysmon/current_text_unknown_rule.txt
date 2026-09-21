@@ -1,0 +1,6 @@
+Current configuration:
+ - Service name:                  Sysmon64
+ - Network connection:            enabled
+
+Rule configuration (version 4.90):
+ - ProcessCreate syntax-changed: include

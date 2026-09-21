@@ -1,0 +1,1 @@
+-A always,exit -F arch=b64 -S all -F auid!=-1 -F uid>=1000 -F gid<=65535 -F exit&=4 -F perm&2 -k ops

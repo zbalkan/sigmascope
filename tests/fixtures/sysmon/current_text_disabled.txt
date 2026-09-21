@@ -1,0 +1,14 @@
+System Monitor v15.22 - System activity monitor
+
+Current configuration:
+ - Service name:                  Sysmon64
+ - Driver name:                   SysmonDrv
+ - HashingAlgorithms:             SHA256
+ - Network connection:            disabled
+ - Archive Directory:             -
+ - Image loading:                 disabled
+ - CRL checking:                  enabled
+ - DNS lookup:                    enabled
+
+Rule configuration (version 4.90):
+ - ProcessCreate                      onmatch: exclude   combine rules using 'And'

@@ -1,0 +1,2 @@
+-a always,exit -F arch=b64 -F auid>=1000 -S execve,execveat -k exec
+-a always,exit -F arch=b32 -F auid>=1000 -S execve,execveat -k exec

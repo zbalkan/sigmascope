@@ -1,0 +1,8 @@
+sigmascope
+Copyright 2026 Zafer Balkan
+
+This product is licensed under the Apache License, Version 2.0.
+
+Native audit-policy interop was cross-checked against Microsoft AuditBuddy
+(https://github.com/microsoft/AuditBuddy), licensed under the MIT License.
+The implementation here is independently written against Microsoft Win32 documentation.

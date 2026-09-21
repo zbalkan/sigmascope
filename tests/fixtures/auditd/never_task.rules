@@ -1,0 +1,3 @@
+-a never,task -F auid>=1000
+-a always,exit -F arch=b64 -S execve,execveat -k exec
+-a always,exit -F arch=b32 -S execve,execveat -k exec

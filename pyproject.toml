@@ -1,0 +1,52 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "sigmascope"
+dynamic = ["version"]
+description = "Read-only attestation of local logging configuration against Sigma logsources"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+authors = [{ name = "Zafer Balkan" }]
+keywords = ["sigma", "detection-engineering", "audit-policy", "sysmon", "auditd", "logging"]
+dependencies = []
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: System Administrators",
+  "Intended Audience :: Information Technology",
+  "Operating System :: Microsoft :: Windows",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Security",
+  "Topic :: System :: Systems Administration",
+  "Typing :: Typed",
+]
+
+[project.urls]
+Homepage = "https://github.com/zbalkan/sigmascope"
+Issues = "https://github.com/zbalkan/sigmascope/issues"
+Changelog = "https://github.com/zbalkan/sigmascope/blob/main/CHANGELOG.md"
+
+[project.scripts]
+sigmascope = "sigmascope.__main__:main"
+
+[tool.hatch.version]
+path = "sigmascope/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["sigmascope"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"sigmascope/schema/report-0.1.json" = "sigmascope/schema/report-0.1.json"
+
+[tool.hatch.build.targets.sdist]
+include = ["sigmascope", "tests", "LICENSE", "NOTICE", "README.md", "CHANGELOG.md"]

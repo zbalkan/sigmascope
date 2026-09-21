@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/zbalkan/sigmascope/schema/report-0.1.json",
+  "title": "sigmascope generation-layer report",
+  "type": "object",
+  "required": ["schema_version", "generated_utc", "tool_version", "catalog_version", "layer", "host", "findings", "diagnostics", "collection_errors"],
+  "properties": {
+    "schema_version": {"const": "0.1"},
+    "generated_utc": {"type": "string", "format": "date-time"},
+    "tool_version": {"type": "string"},
+    "catalog_version": {"type": "string"},
+    "layer": {"const": "generation"},
+    "host": {
+      "type": "object",
+      "required": ["hostname", "os", "os_version", "arch"],
+      "properties": {
+        "hostname": {"type": "string"},
+        "os": {"type": "string"},
+        "os_version": {"type": "string"},
+        "arch": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["logsource", "verdict", "satisfied", "explanation", "providers", "references"],
+        "properties": {
+          "logsource": {
+            "type": "object",
+            "required": ["category", "product"],
+            "properties": {
+              "category": {"type": "string"},
+              "product": {"type": "string"},
+              "service": {"type": "string"}
+            },
+            "additionalProperties": false
+          },
+          "verdict": {"enum": ["covered", "degraded", "not_covered", "indeterminate"]},
+          "satisfied": {"type": "boolean"},
+          "explanation": {"type": "string"},
+          "providers": {"type": "array", "items": {"type": "object"}},
+          "references": {"type": "array", "items": {"type": "string"}}
+        },
+        "additionalProperties": false
+      }
+    },
+    "diagnostics": {"type": "array", "items": {"type": "object"}},
+    "collection_errors": {"type": "array", "items": {"type": "object"}}
+  },
+  "additionalProperties": false
+}

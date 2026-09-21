@@ -1,0 +1,4 @@
+"Rechner","Richtlinie","Unterkategorie","GUID","Einschluss","Ausschluss","Wert"
+"HOST","System","Prozesserstellung","{0CCE922B-69AE-11D9-BED3-505054503030}","Erfolg","","1"
+"HOST","System","Sonstige","{0CCE9226-69AE-11D9-BED3-505054503030}","Erfolg und Fehler","","3"
+"HOST","System","Unbekannt","{11111111-2222-3333-4444-555555555555}","","",""

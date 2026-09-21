@@ -1,0 +1,2 @@
+-a always,exit -F arch=b64 -S execve -k exec
+-a always,exit -F arch=b32 -S execveat -k exec
