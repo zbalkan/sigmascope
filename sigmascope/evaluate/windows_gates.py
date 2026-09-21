@@ -19,30 +19,37 @@ def evaluate_windows_audit(
     guid = str(provider["subcategory_guid"]).upper()
     key = f"windows.audit.{guid}"
 
-    if channel.error is not None or channel.enabled is None:
-        return (
-            Verdict.INDETERMINATE,
-            f"Channel {provider['channel']} configuration could not be determined.",
-            (),
-        )
     if channel.enabled is False:
         return (
             Verdict.NOT_COVERED,
-            f"Channel {provider['channel']} is disabled.",
+            f"Windows Security auditing is present, but channel {provider['channel']} is disabled.",
+            (),
+        )
+    if channel.error is not None or channel.enabled is None:
+        return (
+            Verdict.INDETERMINATE,
+            f"Windows Security auditing is present, but channel {provider['channel']} state could not be determined.",
             (),
         )
 
     audit_gate = _find_gate(audit_policy, key)
     if audit_gate is None:
-        return (
-            Verdict.INDETERMINATE,
-            f"Audit subcategory {guid} is absent from the collected effective policy.",
-            (),
+        message = (
+            "Windows Security auditing is present, but effective audit policy "
+            "could not be determined."
+            if audit_policy.determinacy == "unknown"
+            else (
+                "Windows Security auditing is present, but audit subcategory "
+                f"{guid} was not found in the effective policy."
+            )
         )
+        return Verdict.INDETERMINATE, message, ()
+
     if audit_gate.value in {"unknown", "unchanged"}:
         return (
             Verdict.INDETERMINATE,
-            f"Audit subcategory {guid} has no determinate effective state.",
+            "Windows Security auditing is present, but audit subcategory "
+            f"{guid} has no determinate effective state.",
             (audit_gate,),
         )
 
@@ -50,7 +57,8 @@ def evaluate_windows_audit(
     if str(audit_gate.value) not in required:
         return (
             Verdict.NOT_COVERED,
-            f"Audit subcategory {guid} is {audit_gate.value}; required state is "
+            "Windows Security auditing is present, but audit subcategory "
+            f"{guid} is {audit_gate.value}; required state is "
             + " or ".join(sorted(required))
             + ".",
             (audit_gate,),
@@ -64,7 +72,8 @@ def evaluate_windows_audit(
         if gate is None:
             return (
                 Verdict.INDETERMINATE,
-                f"Field gate {field_key} could not be determined.",
+                "Windows Security auditing is enabled, but field gate "
+                f"{field_key} could not be determined.",
                 tuple(evidence),
             )
         evidence.append(gate)
@@ -81,6 +90,6 @@ def evaluate_windows_audit(
 
     return (
         Verdict.COVERED,
-        f"Audit subcategory {guid} is enabled and its channel gate is enabled.",
+        f"Windows Security auditing is enabled for subcategory {guid}.",
         tuple(evidence),
     )

@@ -13,6 +13,7 @@ from sigmascope.model import CollectionError
 
 @dataclass(frozen=True)
 class SysmonCollection:
+    installed: bool | None
     running: bool | None
     current_config: bytes | None
     errors: tuple[CollectionError, ...] = ()
@@ -103,7 +104,7 @@ def _service_image_path(name: str) -> str | None:
         return None
     import winreg
 
-    path = rf"SYSTEM\CurrentControlSet\Services\{name}"
+    path = rf"SYSTEMCurrentControlSetServices{name}"
     try:
         with winreg.OpenKey(
             winreg.HKEY_LOCAL_MACHINE,
@@ -122,15 +123,14 @@ def _service_image_path(name: str) -> str | None:
     system_root_prefix = chr(92) + "systemroot" + chr(92)
     if executable.lower().startswith(system_root_prefix):
         root = os.environ.get("SystemRoot", "C:" + chr(92) + "Windows")
-        executable = str(
-            Path(root) / executable[len(system_root_prefix):]
-        )
+        executable = str(Path(root) / executable[len(system_root_prefix):])
     return executable
 
 
 def collect_sysmon() -> SysmonCollection:
     if sys.platform != "win32":
         return SysmonCollection(
+            None,
             None,
             None,
             (
@@ -144,7 +144,7 @@ def collect_sysmon() -> SysmonCollection:
 
     errors: list[CollectionError] = []
     service_name: str | None = None
-    running: bool | None = False
+    running: bool | None = None
     for candidate in ("Sysmon64", "Sysmon"):
         state, exists, error = _service_state(candidate)
         if error:
@@ -155,9 +155,10 @@ def collect_sysmon() -> SysmonCollection:
             break
 
     if service_name is None:
-        return SysmonCollection(False, None, tuple(errors))
+        installed = None if errors else False
+        return SysmonCollection(installed, False if installed is False else None, None, tuple(errors))
     if running is not True:
-        return SysmonCollection(running, None, tuple(errors))
+        return SysmonCollection(True, running, None, tuple(errors))
 
     candidates: list[str] = []
     image = _service_image_path(service_name)
@@ -180,7 +181,7 @@ def collect_sysmon() -> SysmonCollection:
                 service_name,
             )
         )
-        return SysmonCollection(True, None, tuple(errors))
+        return SysmonCollection(True, True, None, tuple(errors))
 
     try:
         proc = subprocess.run(
@@ -192,7 +193,7 @@ def collect_sysmon() -> SysmonCollection:
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
         errors.append(CollectionError("sysmon", str(exc), f"{executable} -c"))
-        return SysmonCollection(True, None, tuple(errors))
+        return SysmonCollection(True, True, None, tuple(errors))
 
     if proc.returncode != 0:
         message = proc.stderr.decode("oem", "replace").strip()
@@ -203,7 +204,7 @@ def collect_sysmon() -> SysmonCollection:
                 f"{executable} -c",
             )
         )
-        return SysmonCollection(True, None, tuple(errors))
+        return SysmonCollection(True, True, None, tuple(errors))
 
     output = proc.stdout or proc.stderr
-    return SysmonCollection(True, output, tuple(errors))
+    return SysmonCollection(True, True, output, tuple(errors))

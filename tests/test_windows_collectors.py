@@ -4,6 +4,7 @@ import ctypes
 from pathlib import Path
 
 import sigmascope.collect.windows.auditpol_native as auditpol_native
+import sigmascope.collect.windows.sysmon as sysmon_collect
 from sigmascope.collect.windows.auditpol_native import (
     AUDIT_POLICY_INFORMATION,
     GUID,
@@ -134,3 +135,39 @@ def test_registry_gate_is_limited_to_process_command_line() -> None:
 
 def test_event_channel_enabled_property_id_is_frozen() -> None:
     assert EVT_CHANNEL_CONFIG_ENABLED == 0
+
+
+def test_sysmon_collector_distinguishes_absent_service(monkeypatch) -> None:
+    monkeypatch.setattr(sysmon_collect.sys, "platform", "win32")
+    monkeypatch.setattr(
+        sysmon_collect,
+        "_service_state",
+        lambda name: (False, False, None),
+    )
+    result = sysmon_collect.collect_sysmon()
+    assert result.installed is False
+    assert result.running is False
+
+
+def test_sysmon_collector_distinguishes_stopped_service(monkeypatch) -> None:
+    monkeypatch.setattr(sysmon_collect.sys, "platform", "win32")
+    monkeypatch.setattr(
+        sysmon_collect,
+        "_service_state",
+        lambda name: (False, True, None),
+    )
+    result = sysmon_collect.collect_sysmon()
+    assert result.installed is True
+    assert result.running is False
+
+
+def test_sysmon_collector_keeps_service_query_failure_unknown(monkeypatch) -> None:
+    monkeypatch.setattr(sysmon_collect.sys, "platform", "win32")
+    monkeypatch.setattr(
+        sysmon_collect,
+        "_service_state",
+        lambda name: (None, False, "access denied"),
+    )
+    result = sysmon_collect.collect_sysmon()
+    assert result.installed is None
+    assert result.running is None

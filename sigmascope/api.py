@@ -225,16 +225,15 @@ def _run_windows(
     errors: list[CollectionError] = list(audit_errors)
     errors.extend(sysmon.errors)
 
-    channel_names = {
-        str(provider["channel"])
-        for requirement in requirements
-        for provider in requirement.get("providers", ())
-        if provider.get("channel")
-    }
-    channels = {name: get_channel_config(name) for name in channel_names}
-    for config in channels.values():
-        if config.error is not None:
-            errors.append(config.error)
+    channels = {}
+
+    def channel(name: str):
+        if name not in channels:
+            config = get_channel_config(name)
+            channels[name] = config
+            if config.error is not None:
+                errors.append(config.error)
+        return channels[name]
 
     sysmon_parsed: ParseResult | None = None
     if sysmon.current_config is not None:
@@ -247,12 +246,12 @@ def _run_windows(
         for provider in requirement["providers"]:
             kind = provider.get("kind")
             if kind == "windows_audit":
-                channel = channels[str(provider["channel"])]
+                source_channel = channel(str(provider["channel"]))
                 verdict, explanation, gates = evaluate_windows_audit(
                     provider,
                     audit_policy,
                     registry,
-                    channel,
+                    source_channel,
                 )
                 provider_outputs.append(
                     _provider_result(
@@ -263,29 +262,47 @@ def _run_windows(
                     )
                 )
             elif kind == "sysmon":
-                if sysmon.running is False:
+                if sysmon.installed is False:
                     verdict, explanation = (
                         Verdict.NOT_COVERED,
-                        "The Sysmon service is not installed or is not running.",
+                        "Sysmon is not installed.",
                     )
                     evidence = []
-                elif sysmon.running is not True or sysmon_parsed is None:
+                elif sysmon.installed is None:
                     verdict, explanation = (
                         Verdict.INDETERMINATE,
-                        "Sysmon is present but its effective configuration could not be collected.",
+                        "Sysmon installation state could not be determined.",
+                    )
+                    evidence = []
+                elif sysmon.running is False:
+                    verdict, explanation = (
+                        Verdict.NOT_COVERED,
+                        "Sysmon is installed, but its service is not running.",
+                    )
+                    evidence = []
+                elif sysmon.running is None:
+                    verdict, explanation = (
+                        Verdict.INDETERMINATE,
+                        "Sysmon is installed, but its service state could not be determined.",
+                    )
+                    evidence = []
+                elif sysmon_parsed is None:
+                    verdict, explanation = (
+                        Verdict.INDETERMINATE,
+                        "Sysmon is installed and running, but its effective configuration could not be read.",
                     )
                     evidence = []
                 else:
-                    channel = channels[str(provider["channel"])]
-                    if channel.error or channel.enabled is None:
-                        verdict, explanation = (
-                            Verdict.INDETERMINATE,
-                            "The Sysmon Operational channel state could not be determined.",
-                        )
-                    elif channel.enabled is False:
+                    source_channel = channel(str(provider["channel"]))
+                    if source_channel.enabled is False:
                         verdict, explanation = (
                             Verdict.NOT_COVERED,
-                            "The Sysmon Operational channel is disabled.",
+                            "Sysmon is installed and running, but its Operational channel is disabled.",
+                        )
+                    elif source_channel.error or source_channel.enabled is None:
+                        verdict, explanation = (
+                            Verdict.INDETERMINATE,
+                            "Sysmon is installed and running, but its Operational channel state could not be determined.",
                         )
                     else:
                         verdict, explanation = evaluate_event_type(

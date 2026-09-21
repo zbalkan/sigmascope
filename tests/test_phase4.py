@@ -146,3 +146,46 @@ def test_provider_disjunction_prefers_indeterminate_over_degraded() -> None:
         resolve_provider_disjunction(requirement, providers)["verdict"]
         == "indeterminate"
     )
+
+
+def test_windows_security_disabled_subcategory_is_not_covered() -> None:
+    provider = {
+        "subcategory_guid": "{0CCE922B-69AE-11D9-BED3-505054503030}",
+        "required_states": ["success", "both"],
+        "channel": "Security",
+    }
+    audit = ParseResult(
+        "effective",
+        gates=(
+            Gate(
+                "windows.audit.{0CCE922B-69AE-11D9-BED3-505054503030}",
+                "none",
+                Origin("audit", "guid"),
+            ),
+        ),
+    )
+    verdict, explanation, _ = evaluate_windows_audit(
+        provider,
+        audit,
+        ParseResult("effective"),
+        ChannelConfig(True),
+    )
+    assert verdict is Verdict.NOT_COVERED
+    assert "present" in explanation
+    assert "none" in explanation
+
+
+def test_windows_security_unreadable_policy_is_indeterminate() -> None:
+    provider = {
+        "subcategory_guid": "{0CCE922B-69AE-11D9-BED3-505054503030}",
+        "required_states": ["success", "both"],
+        "channel": "Security",
+    }
+    verdict, explanation, _ = evaluate_windows_audit(
+        provider,
+        ParseResult("unknown"),
+        ParseResult("effective"),
+        ChannelConfig(True),
+    )
+    assert verdict is Verdict.INDETERMINATE
+    assert "effective audit policy could not be determined" in explanation
