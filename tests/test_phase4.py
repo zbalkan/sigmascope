@@ -66,25 +66,21 @@ def test_windows_process_command_line_gate_degrades_security_provider() -> None:
         },
     }
     audit = ParseResult(
-        "audit",
         "effective",
         gates=(
             Gate(
                 "windows.audit.{0CCE922B-69AE-11D9-BED3-505054503030}",
                 "success",
-                "effective",
                 Origin("audit", "guid"),
             ),
         ),
     )
     registry = ParseResult(
-        "registry",
         "effective",
         gates=(
             Gate(
                 "windows.process_creation.include_command_line",
                 False,
-                "effective",
                 Origin("registry", "value"),
             ),
         ),
@@ -106,13 +102,11 @@ def test_file_system_audit_remains_indeterminate_without_sacl() -> None:
         "necessary_but_insufficient": "SACL not evaluated",
     }
     audit = ParseResult(
-        "audit",
         "effective",
         gates=(
             Gate(
                 "windows.audit.{0CCE921D-69AE-11D9-BED3-505054503030}",
                 "success",
-                "effective",
                 Origin("audit", "guid"),
             ),
         ),
@@ -120,7 +114,7 @@ def test_file_system_audit_remains_indeterminate_without_sacl() -> None:
     verdict, explanation, _ = evaluate_windows_audit(
         provider,
         audit,
-        ParseResult("registry", "effective"),
+        ParseResult("effective"),
         ChannelConfig(True),
     )
     assert verdict is Verdict.INDETERMINATE

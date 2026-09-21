@@ -10,9 +10,10 @@ PROCESS_COMMAND_LINE = (
     "ProcessCreationIncludeCmdLine_Enabled",
 )
 
+
 def collect_registry_gates() -> ParseResult:
     if sys.platform != "win32":
-        return ParseResult("windows.registry", "unknown")
+        return ParseResult("unknown")
 
     import winreg
 
@@ -33,19 +34,16 @@ def collect_registry_gates() -> ParseResult:
         value = 0
     except OSError as exc:
         return ParseResult(
-            "windows.registry",
             "unknown",
             diagnostics=(Diagnostic("warn", str(exc), origin, ""),),
         )
 
     return ParseResult(
-        "windows.registry",
         "effective",
         gates=(
             Gate(
                 "windows.process_creation.include_command_line",
                 bool(value),
-                "effective",
                 origin,
             ),
         ),

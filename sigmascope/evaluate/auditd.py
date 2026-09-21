@@ -61,7 +61,7 @@ def evaluate_process_creation(
     machine_arch: str = "x86_64",
 ) -> tuple[Verdict, str]:
     rules = list(parsed.rules)
-    if parsed.determinacy == "unknown" or any(not rule.complete for rule in rules):
+    if parsed.determinacy == "unknown":
         return (
             Verdict.INDETERMINATE,
             "auditd process-creation rules are incomplete or could not be parsed safely.",
@@ -205,9 +205,7 @@ def evaluate_process_creation(
 
 
 def evaluate_file_watch(parsed: ParseResult) -> tuple[Verdict, str]:
-    if parsed.determinacy == "unknown" or any(
-        not rule.complete for rule in parsed.rules
-    ):
+    if parsed.determinacy == "unknown":
         return (
             Verdict.INDETERMINATE,
             "auditd file watch rules are incomplete or could not be parsed safely.",

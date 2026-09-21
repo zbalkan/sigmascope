@@ -52,7 +52,6 @@ def test_localized_auditpol_csv_uses_guid_and_numeric_value() -> None:
     assert process.value == "success"
     assert network.value == "both"
     assert unknown.value == "unknown"
-    assert unknown.determinacy == "unknown"
     assert result.determinacy == "unknown"
 
 

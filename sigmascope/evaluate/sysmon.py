@@ -33,7 +33,7 @@ def evaluate_event_type(parsed: ParseResult, event_type: str) -> tuple[Verdict, 
         if isinstance(rule.selector, EventTypeSelector)
         and rule.selector.event_type == event_type
     ]
-    if any(not rule.complete for rule in matching) or parsed.determinacy == "unknown":
+    if parsed.determinacy == "unknown":
         return (
             Verdict.INDETERMINATE,
             f"Sysmon {event_type} configuration is incomplete or could not be parsed safely.",

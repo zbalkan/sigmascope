@@ -25,7 +25,6 @@ Determinacy = Literal["effective", "unknown"]
 class Gate:
     key: str
     value: str | int | bool
-    determinacy: Determinacy
     origin: Origin
 
 
@@ -47,7 +46,6 @@ class Predicate:
     field: str
     op: PredicateOp
     value: str
-    raw: str
 
 
 class Effect(Enum):
@@ -73,7 +71,6 @@ class Rule:
     selector: Selector
     predicates: tuple[Predicate, ...]
     order: int
-    complete: bool
     origin: Origin
     raw: str
 
@@ -88,7 +85,6 @@ class Diagnostic:
 
 @dataclass(frozen=True)
 class ParseResult:
-    source_id: str
     determinacy: Determinacy
     gates: tuple[Gate, ...] = ()
     rules: tuple[Rule, ...] = ()

@@ -41,8 +41,6 @@ def parse_auditpol_csv(source_id: str, data: str | bytes) -> ParseResult:
         if not candidates:
             continue
         guid_index = candidates[0]
-        # In /r output the setting value is numeric. Locate it from the right rather
-        # than trusting a localized column heading.
         for index in range(len(row) - 1, -1, -1):
             if index != guid_index and row[index].strip() in _SETTING_VALUES:
                 setting_index = index
@@ -53,7 +51,6 @@ def parse_auditpol_csv(source_id: str, data: str | bytes) -> ParseResult:
 
     if first_data_index is None or guid_index is None or setting_index is None:
         return ParseResult(
-            source_id,
             "unknown",
             diagnostics=(
                 Diagnostic(
@@ -108,19 +105,12 @@ def parse_auditpol_csv(source_id: str, data: str | bytes) -> ParseResult:
             Gate(
                 f"windows.audit.{_canonical_guid(guid_text)}",
                 state,
-                "effective" if state != "unknown" else "unknown",
                 Origin(source_id, f"row {row_index}"),
             )
         )
 
-    determinacy = (
-        "unknown"
-        if any(gate.determinacy == "unknown" for gate in gates)
-        else "effective"
-    )
     return ParseResult(
-        source_id,
-        determinacy,
+        "unknown" if diagnostics else "effective",
         gates=tuple(gates),
         diagnostics=tuple(diagnostics),
     )

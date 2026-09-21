@@ -133,7 +133,6 @@ def test_unset_auid_forms_normalise() -> None:
 def test_unknown_option_is_diagnostic_and_indeterminate() -> None:
     result = parse_fixture("unknown.rules")
     assert result.diagnostics
-    assert result.rules[0].complete is False
     assert (
         evaluate_process_creation(result)[0]
         is Verdict.INDETERMINATE

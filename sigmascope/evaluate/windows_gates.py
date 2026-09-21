@@ -39,7 +39,7 @@ def evaluate_windows_audit(
             f"Audit subcategory {guid} is absent from the collected effective policy.",
             (),
         )
-    if audit_gate.determinacy == "unknown" or audit_gate.value in {"unknown", "unchanged"}:
+    if audit_gate.value in {"unknown", "unchanged"}:
         return (
             Verdict.INDETERMINATE,
             f"Audit subcategory {guid} has no determinate effective state.",
@@ -61,7 +61,7 @@ def evaluate_windows_audit(
     if isinstance(field_gate, dict):
         field_key = str(field_gate["key"])
         gate = _find_gate(registry, field_key)
-        if gate is None or gate.determinacy == "unknown":
+        if gate is None:
             return (
                 Verdict.INDETERMINATE,
                 f"Field gate {field_key} could not be determined.",

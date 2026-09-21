@@ -60,13 +60,11 @@ def _provider_result(
     source_id: str,
     verdict: Verdict,
     explanation: str,
-    determinacy: str,
     evidence: list[dict[str, str]],
 ) -> dict[str, object]:
     return {
         "source_id": source_id,
         "verdict": verdict.value,
-        "determinacy": determinacy,
         "explanation": explanation,
         "evidence": evidence,
     }
@@ -113,13 +111,13 @@ def _run_linux(
     parsed = (
         parse_auditd_rules("auditctl -l", collection.effective_rules)
         if collection.effective_rules is not None
-        else ParseResult("auditd", "unknown")
+        else ParseResult("unknown")
     )
 
     status = (
         parse_auditd_status("auditctl -s", collection.status)
         if collection.status is not None
-        else ParseResult("auditctl -s", "unknown")
+        else ParseResult("unknown")
     )
     diagnostics.extend(parsed.diagnostics)
     diagnostics.extend(status.diagnostics)
@@ -158,7 +156,6 @@ def _run_linux(
                     str(provider["source_id"]),
                     verdict,
                     explanation,
-                    parsed.determinacy,
                     _evidence_from_rules(parsed),
                 )
             )
@@ -188,12 +185,11 @@ def _native_policy_result(
             Gate(
                 f"windows.audit.{guid.upper()}",
                 state,
-                "effective",
                 Origin("AuditQuerySystemPolicy", guid),
             )
             for guid, state in native.states.items()
         )
-        return ParseResult("AuditQuerySystemPolicy", "effective", gates=gates), []
+        return ParseResult("effective", gates=gates), []
 
     cli = collect_cli_policy()
     errors = [native.error]
@@ -201,7 +197,7 @@ def _native_policy_result(
         return cli.parsed, errors
     if cli.error is not None:
         errors.append(cli.error)
-    return ParseResult("windows.audit_policy", "unknown"), errors
+    return ParseResult("unknown"), errors
 
 
 def _run_windows(
@@ -257,23 +253,20 @@ def _run_windows(
                         str(provider["source_id"]),
                         verdict,
                         explanation,
-                        "effective" if verdict is not Verdict.INDETERMINATE else "unknown",
                         _evidence_from_gates(gates),
                     )
                 )
             elif kind == "sysmon":
                 if sysmon.running is False:
-                    verdict, explanation, determinacy = (
+                    verdict, explanation = (
                         Verdict.NOT_COVERED,
                         "The Sysmon service is not installed or is not running.",
-                        "effective",
                     )
                     evidence = []
                 elif sysmon.running is not True or sysmon_parsed is None:
-                    verdict, explanation, determinacy = (
+                    verdict, explanation = (
                         Verdict.INDETERMINATE,
                         "Sysmon is present but its effective configuration could not be collected.",
-                        "unknown",
                     )
                     evidence = []
                 else:
@@ -293,7 +286,6 @@ def _run_windows(
                             sysmon_parsed,
                             str(provider["event_type"]),
                         )
-                    determinacy = sysmon_parsed.determinacy
                     evidence = _evidence_from_rules(sysmon_parsed)
                     evidence.extend(_evidence_from_gates(sysmon_parsed.gates))
                 provider_outputs.append(
@@ -301,7 +293,6 @@ def _run_windows(
                         str(provider["source_id"]),
                         verdict,
                         explanation,
-                        determinacy,
                         evidence,
                     )
                 )

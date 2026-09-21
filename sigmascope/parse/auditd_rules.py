@@ -49,7 +49,7 @@ def _filter(raw: str) -> Predicate | None:
     value = match.group("value")
     if field == "auid" and value in {"-1", "4294967295"}:
         value = "unset"
-    return Predicate(field, _OPS[match.group("op")], value, raw)
+    return Predicate(field, _OPS[match.group("op")], value)
 
 
 def parse_auditd_rules(source_id: str, data: str | bytes) -> ParseResult:
@@ -66,18 +66,12 @@ def parse_auditd_rules(source_id: str, data: str | bytes) -> ParseResult:
             continue
         origin = Origin(source_id, f"line {line_number}")
         tokens = [part.strip() for part in split_options(line) if part.strip()]
-        rule, issues = _parse_rule(
-            line,
-            tokens,
-            len(rules) + 1,
-            origin,
-        )
+        rule, issues = _parse_rule(line, tokens, len(rules) + 1, origin)
         diagnostics.extend(issues)
         if rule is not None:
             rules.append(rule)
 
     return ParseResult(
-        source_id,
         "unknown" if diagnostics else "effective",
         rules=tuple(rules),
         diagnostics=tuple(diagnostics),
@@ -91,7 +85,6 @@ def _parse_rule(
     origin: Origin,
 ) -> tuple[Rule | None, list[Diagnostic]]:
     diagnostics: list[Diagnostic] = []
-    complete = True
     effect: Effect | None = None
     scope = "exit"
     syscalls: set[str] = set()
@@ -107,7 +100,6 @@ def _parse_rule(
                 diagnostics.append(
                     Diagnostic("warn", f"invalid {option} value {value!r}", origin, token)
                 )
-                complete = False
                 continue
             action, scope = (
                 part.strip().lower() for part in value.split(",", 1)
@@ -125,7 +117,6 @@ def _parse_rule(
                         token,
                     )
                 )
-                complete = False
         elif option == "-S":
             syscalls.update(
                 syscall.strip()
@@ -143,7 +134,6 @@ def _parse_rule(
                         token,
                     )
                 )
-                complete = False
             else:
                 predicates.append(predicate)
         elif option == "-w":
@@ -151,7 +141,7 @@ def _parse_rule(
         elif option == "-p":
             watch_perms = value
         elif option == "-k":
-            predicates.append(Predicate("key", "eq", value, token))
+            predicates.append(Predicate("key", "eq", value))
         else:
             diagnostics.append(
                 Diagnostic(
@@ -161,16 +151,14 @@ def _parse_rule(
                     token,
                 )
             )
-            complete = False
 
     if watch_path is not None:
         effect = Effect.INCLUDE
-        predicates.insert(0, Predicate("path", "eq", watch_path, f"-w {watch_path}"))
+        predicates.insert(0, Predicate("path", "eq", watch_path))
         if watch_perms is not None:
-            predicates.insert(1, Predicate("perm", "eq", watch_perms, f"-p {watch_perms}"))
+            predicates.insert(1, Predicate("perm", "eq", watch_perms))
     elif watch_perms is not None:
         diagnostics.append(Diagnostic("warn", "-p without -w", origin, raw_line))
-        complete = False
 
     if effect is None:
         diagnostics.append(
@@ -189,7 +177,6 @@ def _parse_rule(
             selector=SyscallSelector(frozenset(syscalls), scope),
             predicates=tuple(predicates),
             order=order,
-            complete=complete,
             origin=origin,
             raw=raw_line,
         ),

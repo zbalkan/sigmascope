@@ -21,13 +21,11 @@ def parse_auditd_status(source_id: str, data: str | bytes) -> ParseResult:
         except (ValueError, IndexError):
             break
         return ParseResult(
-            source_id,
             "effective",
-            gates=(Gate("auditd.enabled", enabled, "effective", origin),),
+            gates=(Gate("auditd.enabled", enabled, origin),),
         )
 
     return ParseResult(
-        source_id,
         "unknown",
         diagnostics=(
             Diagnostic(

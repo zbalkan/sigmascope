@@ -45,10 +45,9 @@ def parse_sysmon_current(source_id: str, data: str | bytes) -> ParseResult:
     origin: Origin | None = None
     raw: list[str] = []
     predicates: list[Predicate] = []
-    complete = True
 
     def finish() -> None:
-        nonlocal event, effect, origin, raw, predicates, complete
+        nonlocal event, effect, origin, raw, predicates
         if event is not None and effect is not None and origin is not None:
             rules.append(
                 Rule(
@@ -56,7 +55,6 @@ def parse_sysmon_current(source_id: str, data: str | bytes) -> ParseResult:
                     selector=EventTypeSelector(event),
                     predicates=tuple(predicates),
                     order=len(rules) + 1,
-                    complete=complete,
                     origin=origin,
                     raw="\n".join(raw),
                 )
@@ -66,7 +64,6 @@ def parse_sysmon_current(source_id: str, data: str | bytes) -> ParseResult:
         origin = None
         raw = []
         predicates = []
-        complete = True
 
     for line_number, line in enumerate(text.splitlines(), start=1):
         line_origin = Origin(source_id, f"line {line_number}")
@@ -85,7 +82,6 @@ def parse_sysmon_current(source_id: str, data: str | bytes) -> ParseResult:
                         Gate(
                             "sysmon.NetworkConnect.enabled",
                             value == "enabled",
-                            "effective",
                             line_origin,
                         )
                     )
@@ -133,18 +129,16 @@ def parse_sysmon_current(source_id: str, data: str | bytes) -> ParseResult:
                     match.group("field").strip().lower().replace(" ", "_"),
                     "contains",
                     match.group("value").strip(),
-                    line,
                 )
             )
             continue
 
         if "compound rule" in line.lower():
             predicates.append(
-                Predicate("compound_rule", "contains", line.strip(), line)
+                Predicate("compound_rule", "contains", line.strip())
             )
             continue
 
-        complete = False
         diagnostics.append(
             Diagnostic(
                 "warn",
@@ -156,7 +150,6 @@ def parse_sysmon_current(source_id: str, data: str | bytes) -> ParseResult:
 
     finish()
     return ParseResult(
-        source_id,
         "unknown" if diagnostics else "effective",
         gates=tuple(gates),
         rules=tuple(rules),
