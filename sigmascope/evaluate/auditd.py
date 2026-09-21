@@ -96,16 +96,37 @@ def evaluate_process_creation(
             "No active always,exit rule selects execve or execveat.",
         )
 
+    task_suppressors = [
+        rule
+        for rule in rules
+        if rule.effect is Effect.EXCLUDE
+        and isinstance(rule.selector, SyscallSelector)
+        and rule.selector.scope == "task"
+    ]
+    if any(
+        not [predicate for predicate in rule.predicates if predicate.field != "key"]
+        for rule in task_suppressors
+    ):
+        return (
+            Verdict.NOT_COVERED,
+            "An unconditional auditd never,task rule causes new processes to "
+            "skip syscall-rule processing.",
+        )
+    if task_suppressors:
+        return (
+            Verdict.DEGRADED,
+            "A scoped auditd never,task rule can suppress process-creation "
+            "events for matching tasks.",
+        )
     if any(
         rule.effect is Effect.EXCLUDE
         and isinstance(rule.selector, SyscallSelector)
-        and rule.selector.scope in {"task", "exclude"}
+        and rule.selector.scope == "exclude"
         for rule in rules
     ):
         return (
             Verdict.DEGRADED,
-            "An auditd never rule outside the exit list can suppress a subset "
-            "of process-creation events.",
+            "An auditd exclude rule can suppress a subset of audit events.",
         )
 
     if machine_arch in {"x86_64", "amd64"}:

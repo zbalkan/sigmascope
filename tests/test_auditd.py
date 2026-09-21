@@ -36,6 +36,8 @@ def parse_fixture(name: str):
         "split_arch_syscalls.rules",
         "filtered_both_arches.rules",
         "early_never.rules",
+        "never_task.rules",
+        "never_task_all.rules",
     ],
 )
 def test_option_splitter_round_trips_every_fixture_line(
@@ -155,9 +157,17 @@ def test_status_parser() -> None:
     assert result.gates[0].value == 1
 
 
-def test_never_task_degrades_process_coverage() -> None:
+def test_scoped_never_task_degrades_process_coverage() -> None:
     verdict, explanation = evaluate_process_creation(
         parse_fixture("never_task.rules")
     )
     assert verdict is Verdict.DEGRADED
-    assert "outside the exit list" in explanation
+    assert "scoped" in explanation.lower()
+
+
+def test_unconditional_never_task_disables_process_coverage() -> None:
+    verdict, explanation = evaluate_process_creation(
+        parse_fixture("never_task_all.rules")
+    )
+    assert verdict is Verdict.NOT_COVERED
+    assert "skip syscall-rule processing" in explanation
