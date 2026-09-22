@@ -17,6 +17,10 @@ _OPTION_BOUNDARY = re.compile(r"(?<!\S)-[A-Za-z](?=\s|$)")
 _FILTER = re.compile(
     r"^(?P<field>[A-Za-z_][A-Za-z0-9_]*)\s*(?P<op>!=|<=|>=|&=|=|<|>|&)\s*(?P<value>.*)$"
 )
+_ACTIONS = {
+    "always": Effect.INCLUDE,
+    "never": Effect.EXCLUDE,
+}
 _OPS = {
     "=": "eq",
     "!=": "ne",
@@ -101,22 +105,25 @@ def _parse_rule(
                     Diagnostic("warn", f"invalid {option} value {value!r}", origin, token)
                 )
                 continue
-            action, scope = (
+            first, second = (
                 part.strip().lower() for part in value.split(",", 1)
             )
-            if action == "always":
-                effect = Effect.INCLUDE
-            elif action == "never":
-                effect = Effect.EXCLUDE
-            else:
+            # auditctl accepts -a <action>,<list> and -a <list>,<action>;
+            # auditctl -l normalises to the former, rule files need not.
+            if (first in _ACTIONS) == (second in _ACTIONS):
                 diagnostics.append(
                     Diagnostic(
                         "warn",
-                        f"unrecognised audit action {action!r}",
+                        f"unrecognised audit action in {value!r}",
                         origin,
                         token,
                     )
                 )
+                continue
+            action, scope = (
+                (first, second) if first in _ACTIONS else (second, first)
+            )
+            effect = _ACTIONS[action]
         elif option == "-S":
             syscalls.update(
                 syscall.strip()

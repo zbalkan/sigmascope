@@ -123,7 +123,12 @@ def _run_linux(
         for provider in requirement["providers"]:
             if provider.get("kind") != "auditd":
                 continue
-            if not collection.installed:
+            if collection.installed is None:
+                verdict, explanation = (
+                    Verdict.INDETERMINATE,
+                    "auditd installation state could not be determined.",
+                )
+            elif not collection.installed:
                 verdict, explanation = (
                     Verdict.NOT_COVERED,
                     "auditd is not installed (auditctl was not found).",

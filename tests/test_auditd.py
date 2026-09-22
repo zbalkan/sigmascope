@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import subprocess
 
 import pytest
 
@@ -244,3 +245,142 @@ def test_auditd_inaccessible_remains_indeterminate(monkeypatch) -> None:
     assert all(item["verdict"] == "indeterminate" for item in findings)
     assert all("installed" in item["explanation"] for item in findings)
     assert all("could not be determined" in item["explanation"] for item in findings)
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "arm_b32_only.rules",
+        "arm_b64_only.rules",
+        "no_arch.rules",
+        "suppressed_watch.rules",
+        "scoped_suppressed_watch.rules",
+        "reversed_action.rules",
+        "dual_target.rules",
+    ],
+)
+def test_option_splitter_round_trips_added_fixtures(name: str) -> None:
+    for line in (
+        FIXTURES / name
+    ).read_text(encoding="utf-8").splitlines():
+        assert "".join(split_options(line)) == line
+
+
+@pytest.mark.parametrize(
+    "name",
+    ["arm_b32_only.rules", "arm_b64_only.rules"],
+)
+def test_explicit_arch_selectors_are_not_interpreted_off_x86(
+    name: str,
+) -> None:
+    verdict, explanation = evaluate_process_creation(
+        parse_fixture(name),
+        machine_arch="aarch64",
+    )
+    assert verdict is Verdict.INDETERMINATE
+    assert "aarch64" in explanation
+
+
+def test_arch_free_rules_still_cover_non_x86_hosts() -> None:
+    verdict, _ = evaluate_process_creation(
+        parse_fixture("no_arch.rules"),
+        machine_arch="aarch64",
+    )
+    assert verdict is Verdict.COVERED
+
+
+def test_unconditional_never_task_suppresses_file_watch() -> None:
+    verdict, explanation = evaluate_file_watch(
+        parse_fixture("suppressed_watch.rules")
+    )
+    assert verdict is Verdict.NOT_COVERED
+    assert "ASSUMED" in explanation
+
+
+def test_scoped_never_task_is_reported_against_file_watch() -> None:
+    verdict, explanation = evaluate_file_watch(
+        parse_fixture("scoped_suppressed_watch.rules")
+    )
+    assert verdict is Verdict.DEGRADED
+    assert "never,task" in explanation
+
+
+def test_unconditional_never_task_names_the_assumption() -> None:
+    _, explanation = evaluate_process_creation(
+        parse_fixture("never_task_all.rules")
+    )
+    assert "ASSUMED" in explanation
+    assert "(A1)" in explanation
+
+
+def test_reversed_action_order_is_accepted() -> None:
+    result = parse_fixture("reversed_action.rules")
+    assert not result.diagnostics
+    assert result.determinacy == "effective"
+    assert evaluate_process_creation(result)[0] is Verdict.COVERED
+
+
+def test_one_rule_with_two_target_fields_counts_distinct_targets() -> None:
+    _, explanation = evaluate_file_watch(parse_fixture("dual_target.rules"))
+    assert "2 target" in explanation
+
+
+def test_dual_target_rule_does_not_double_count_identical_paths() -> None:
+    result = parse_auditd_rules(
+        "dup",
+        "-a always,exit -F path=/etc/passwd -F perm=wa -k a\n"
+        "-a always,exit -F path=/etc/passwd -F perm=wa -k b\n",
+    )
+    _, explanation = evaluate_file_watch(result)
+    assert "1 target" in explanation
+
+
+def test_auditctl_absent_from_path_is_found_in_sbin(monkeypatch) -> None:
+    monkeypatch.setattr(auditd_collect.shutil, "which", lambda name: None)
+    monkeypatch.setattr(
+        auditd_collect.os.path,
+        "exists",
+        lambda path: path == "/usr/sbin/auditctl",
+    )
+    assert auditd_collect._locate_auditctl() == ("/usr/sbin/auditctl", True)
+
+
+def test_unsearchable_sbin_makes_auditd_absence_indeterminate(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(auditd_collect.shutil, "which", lambda name: None)
+    monkeypatch.setattr(auditd_collect.os.path, "exists", lambda path: False)
+    monkeypatch.setattr(auditd_collect.os.path, "isdir", lambda path: True)
+    monkeypatch.setattr(auditd_collect.os, "access", lambda path, mode: False)
+    collection = auditd_collect.collect_auditd()
+    assert collection.installed is None
+    assert collection.errors
+
+    monkeypatch.setattr(
+        auditd_collect,
+        "collect_auditd",
+        lambda: collection,
+    )
+    findings, _, _ = api._run_linux(list(LINUX_MAPPINGS), "x86_64")
+    assert all(item["verdict"] == "indeterminate" for item in findings)
+
+
+def test_conclusive_absence_remains_not_covered(monkeypatch) -> None:
+    monkeypatch.setattr(auditd_collect.shutil, "which", lambda name: None)
+    monkeypatch.setattr(auditd_collect.os.path, "exists", lambda path: False)
+    monkeypatch.setattr(auditd_collect.os.path, "isdir", lambda path: True)
+    monkeypatch.setattr(auditd_collect.os, "access", lambda path, mode: True)
+    collection = auditd_collect.collect_auditd()
+    assert collection.installed is False
+    assert not collection.errors
+
+
+def test_auditctl_timeout_is_reported_as_collection_error(monkeypatch) -> None:
+    def hang(*args, **kwargs):
+        raise subprocess.TimeoutExpired(cmd="auditctl -l", timeout=15)
+
+    monkeypatch.setattr(auditd_collect.subprocess, "run", hang)
+    output, error = auditd_collect._auditctl("/usr/sbin/auditctl", "-l")
+    assert output is None
+    assert error is not None
+    assert "auditctl" in error.resource

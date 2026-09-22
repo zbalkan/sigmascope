@@ -1,0 +1,1 @@
+-a always,exit -F dir=/etc -F path=/etc/passwd -F perm=wa -k files

@@ -1,3 +1,15 @@
+"""auditd generation-coverage evaluation.
+
+ASSUMED A1: an unconditional ``never,task`` rule stops the kernel from
+allocating an audit context when a task is created, so syscall and watch rules
+are never evaluated for the affected processes. auditctl(8) documents that the
+task list is evaluated only during fork and clone and that ``never`` generates
+no audit records, but the consequence for later syscall-rule processing is
+inferred from those two statements rather than stated by them. This assumption
+is unverified and requires confirmation on a live host.
+Source: https://man7.org/linux/man-pages/man8/auditctl.8.html
+"""
+
 from __future__ import annotations
 
 from sigmascope.model import (
@@ -55,6 +67,43 @@ def _exit_rule_suppresses(rule: Rule, arch: str, syscall: str) -> bool:
     return not arches or arch in arches
 
 
+def _suppression(rules: list[Rule]) -> tuple[Verdict, str] | None:
+    """Report rules that suppress audit events regardless of the requirement."""
+    task_suppressors = [
+        rule
+        for rule in rules
+        if rule.effect is Effect.EXCLUDE
+        and isinstance(rule.selector, SyscallSelector)
+        and rule.selector.scope == "task"
+    ]
+    if any(
+        not [predicate for predicate in rule.predicates if predicate.field != "key"]
+        for rule in task_suppressors
+    ):
+        return (
+            Verdict.NOT_COVERED,
+            "An unconditional auditd never,task rule is ASSUMED to make new "
+            "processes skip syscall-rule processing (A1).",
+        )
+    if task_suppressors:
+        return (
+            Verdict.DEGRADED,
+            "A scoped auditd never,task rule can suppress audit events for "
+            "matching tasks.",
+        )
+    if any(
+        rule.effect is Effect.EXCLUDE
+        and isinstance(rule.selector, SyscallSelector)
+        and rule.selector.scope == "exclude"
+        for rule in rules
+    ):
+        return (
+            Verdict.DEGRADED,
+            "An auditd exclude rule can suppress a subset of audit events.",
+        )
+    return None
+
+
 def evaluate_process_creation(
     parsed: ParseResult,
     *,
@@ -96,38 +145,9 @@ def evaluate_process_creation(
             "No active always,exit rule selects execve or execveat.",
         )
 
-    task_suppressors = [
-        rule
-        for rule in rules
-        if rule.effect is Effect.EXCLUDE
-        and isinstance(rule.selector, SyscallSelector)
-        and rule.selector.scope == "task"
-    ]
-    if any(
-        not [predicate for predicate in rule.predicates if predicate.field != "key"]
-        for rule in task_suppressors
-    ):
-        return (
-            Verdict.NOT_COVERED,
-            "An unconditional auditd never,task rule causes new processes to "
-            "skip syscall-rule processing.",
-        )
-    if task_suppressors:
-        return (
-            Verdict.DEGRADED,
-            "A scoped auditd never,task rule can suppress process-creation "
-            "events for matching tasks.",
-        )
-    if any(
-        rule.effect is Effect.EXCLUDE
-        and isinstance(rule.selector, SyscallSelector)
-        and rule.selector.scope == "exclude"
-        for rule in rules
-    ):
-        return (
-            Verdict.DEGRADED,
-            "An auditd exclude rule can suppress a subset of audit events.",
-        )
+    suppression = _suppression(rules)
+    if suppression is not None:
+        return suppression
 
     if machine_arch in {"x86_64", "amd64"}:
         if any(not _arches(rule) for rule in candidates):
@@ -184,6 +204,13 @@ def evaluate_process_creation(
             "b64 and b32 without narrowing predicates.",
         )
 
+    if any(_predicate(rule, "arch") for rule in candidates):
+        return (
+            Verdict.INDETERMINATE,
+            "auditd exec rules carry an explicit arch selector, which "
+            f"sigmascope does not interpret for {machine_arch}.",
+        )
+
     broad = {
         syscall
         for rule in candidates
@@ -211,24 +238,42 @@ def evaluate_file_watch(parsed: ParseResult) -> tuple[Verdict, str]:
             "auditd file watch rules are incomplete or could not be parsed safely.",
         )
 
-    targets = [
-        target.value
-        for rule in parsed.rules
-        if rule.effect is Effect.INCLUDE
-        for target in rule.predicates
-        if target.field in {"path", "dir"}
-        and any(
+    rules = list(parsed.rules)
+    targets: list[str] = []
+    for rule in rules:
+        if rule.effect is not Effect.INCLUDE:
+            continue
+        if not any(
             "w" in permissions.value and "a" in permissions.value
             for permissions in _predicate(rule, "perm")
-        )
-    ]
+        ):
+            continue
+        for target in rule.predicates:
+            if target.field in {"path", "dir"} and target.value not in targets:
+                targets.append(target.value)
+
     if not targets:
         return (
             Verdict.NOT_COVERED,
             "No active auditd watch with write and attribute permissions was found.",
         )
-    return (
-        Verdict.DEGRADED,
+
+    suppression = _suppression(rules)
+    if suppression is not None and suppression[0] is Verdict.NOT_COVERED:
+        return suppression
+
+    notes = [] if suppression is None else [suppression[1]]
+    if any(
+        rule.effect is Effect.EXCLUDE
+        and isinstance(rule.selector, SyscallSelector)
+        and rule.selector.scope == "exit"
+        for rule in rules
+    ):
+        notes.append(
+            "An auditd never,exit rule can suppress matching watch events."
+        )
+    message = (
         f"auditd file monitoring is path-scoped ({len(targets)} target(s)); "
-        "generic file_event coverage is not global.",
+        "generic file_event coverage is not global."
     )
+    return Verdict.DEGRADED, " ".join([message, *notes])

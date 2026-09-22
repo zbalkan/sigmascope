@@ -1,0 +1,2 @@
+-a never,task -F uid=48
+-w /etc -p wa -k files

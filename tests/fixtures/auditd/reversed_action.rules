@@ -1,0 +1,2 @@
+-a exit,always -F arch=b64 -S execve,execveat -k proc
+-a exit,always -F arch=b32 -S execve,execveat -k proc
