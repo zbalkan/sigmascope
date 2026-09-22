@@ -1,13 +1,14 @@
 """auditd generation-coverage evaluation.
 
-ASSUMED A1: an unconditional ``never,task`` rule stops the kernel from
-allocating an audit context when a task is created, so syscall and watch rules
-are never evaluated for the affected processes. auditctl(8) documents that the
-task list is evaluated only during fork and clone and that ``never`` generates
-no audit records, but the consequence for later syscall-rule processing is
-inferred from those two statements rather than stated by them. This assumption
-is unverified and requires confirmation on a live host.
-Source: https://man7.org/linux/man-pages/man8/auditctl.8.html
+An unconditional ``never,task`` rule resolves to ``AUDIT_STATE_DISABLED`` in
+``audit_filter_rules``. ``audit_alloc`` then returns without allocating an audit
+context and clears ``SYSCALL_AUDIT`` for the new task, so neither syscall rules
+nor watches are evaluated for it. The kernel states the intent directly: "At
+process creation time, we can determine if system-call auditing is completely
+disabled for this task." The code is identical in v5.14, the RHEL 9 kernel, and
+in mainline. Processes that already held a context when the rule was loaded keep
+it, so the suppression takes hold as those processes are replaced.
+Source: https://github.com/torvalds/linux/blob/v5.14/kernel/auditsc.c
 """
 
 from __future__ import annotations
@@ -82,8 +83,9 @@ def _suppression(rules: list[Rule]) -> tuple[Verdict, str] | None:
     ):
         return (
             Verdict.NOT_COVERED,
-            "An unconditional auditd never,task rule is ASSUMED to make new "
-            "processes skip syscall-rule processing (A1).",
+            "An unconditional auditd never,task rule leaves new processes "
+            "without an audit context, so no syscall rule or watch is "
+            "evaluated for them.",
         )
     if task_suppressors:
         return (

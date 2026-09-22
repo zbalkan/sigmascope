@@ -58,8 +58,10 @@ current-configuration dump. The compiled Sysmon Rules registry blob is never par
 
 Sysmon assumptions V1-V2 remain explicit in fixtures and explanations until they are
 verified on a live host. Mixed include/exclude precedence follows Microsoft documentation.
-auditd assumption A1, that an unconditional never,task rule makes matching processes skip
-syscall-rule processing, is labelled the same way in explanations and remains unverified.
+The auditd claim that an unconditional never,task rule leaves new processes without an
+audit context is not an assumption of the same kind. It is verified against audit_alloc
+and audit_filter_rules in the kernel source, which behave identically from the RHEL 9
+kernel through mainline, and the kernel reference is carried in both auditd mappings.
 
 Coverage is never claimed from an architecture selector the tool cannot interpret. On
 x86-64 hosts both b64 and b32 must be covered; on any other host an explicit arch

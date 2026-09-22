@@ -9,9 +9,12 @@ _EVENTLOG_MAPPING = (
     "data/audit_policy_category_to_event_mapping.json"
 )
 _SYSMON_REFERENCE = "https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon"
-# Source for ASSUMED A1, the never,task suppression semantics both auditd
-# requirements rely on. See sigmascope/evaluate/auditd.py.
 _AUDITCTL_REFERENCE = "https://man7.org/linux/man-pages/man8/auditctl.8.html"
+# audit_alloc and audit_filter_rules: the never,task suppression semantics both
+# auditd requirements rely on. See sigmascope/evaluate/auditd.py.
+_AUDIT_KERNEL_REFERENCE = (
+    "https://github.com/torvalds/linux/blob/v5.14/kernel/auditsc.c"
+)
 _AUDIT_RULES_REFERENCE = "https://man7.org/linux/man-pages/man7/audit.rules.7.html"
 
 WINDOWS_MAPPINGS = (
@@ -108,7 +111,7 @@ LINUX_MAPPINGS = (
                 "requirement": "process_creation",
             },
         ),
-        "references": (_AUDITCTL_REFERENCE,),
+        "references": (_AUDITCTL_REFERENCE, _AUDIT_KERNEL_REFERENCE),
     },
     {
         "logsource": {
@@ -123,7 +126,11 @@ LINUX_MAPPINGS = (
                 "requirement": "file_watch",
             },
         ),
-        "references": (_AUDIT_RULES_REFERENCE, _AUDITCTL_REFERENCE),
+        "references": (
+            _AUDIT_RULES_REFERENCE,
+            _AUDITCTL_REFERENCE,
+            _AUDIT_KERNEL_REFERENCE,
+        ),
     },
 )
 

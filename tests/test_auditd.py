@@ -183,7 +183,7 @@ def test_unconditional_never_task_disables_process_coverage() -> None:
         parse_fixture("never_task_all.rules")
     )
     assert verdict is Verdict.NOT_COVERED
-    assert "skip syscall-rule processing" in explanation
+    assert "without an audit context" in explanation
 
 
 def test_auditd_missing_is_not_covered(monkeypatch) -> None:
@@ -294,7 +294,7 @@ def test_unconditional_never_task_suppresses_file_watch() -> None:
         parse_fixture("suppressed_watch.rules")
     )
     assert verdict is Verdict.NOT_COVERED
-    assert "ASSUMED" in explanation
+    assert "without an audit context" in explanation
 
 
 def test_scoped_never_task_is_reported_against_file_watch() -> None:
@@ -305,12 +305,11 @@ def test_scoped_never_task_is_reported_against_file_watch() -> None:
     assert "never,task" in explanation
 
 
-def test_unconditional_never_task_names_the_assumption() -> None:
+def test_unconditional_never_task_names_the_kernel_mechanism() -> None:
     _, explanation = evaluate_process_creation(
         parse_fixture("never_task_all.rules")
     )
-    assert "ASSUMED" in explanation
-    assert "(A1)" in explanation
+    assert "without an audit context" in explanation
 
 
 def test_reversed_action_order_is_accepted() -> None:
