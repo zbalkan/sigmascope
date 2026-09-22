@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import ctypes
 from pathlib import Path
+import subprocess
+import sys
+import types
 
+import sigmascope.collect.windows.auditpol_cli as auditpol_cli
 import sigmascope.collect.windows.auditpol_native as auditpol_native
 import sigmascope.collect.windows.sysmon as sysmon_collect
 from sigmascope.collect.windows.auditpol_native import (
@@ -171,3 +175,71 @@ def test_sysmon_collector_keeps_service_query_failure_unknown(monkeypatch) -> No
     result = sysmon_collect.collect_sysmon()
     assert result.installed is None
     assert result.running is None
+
+
+def test_service_key_uses_single_backslash_separators() -> None:
+    assert (
+        sysmon_collect._service_key("Sysmon64")
+        == "SYSTEM" + chr(92) + "CurrentControlSet" + chr(92)
+        + "Services" + chr(92) + "Sysmon64"
+    )
+
+
+def test_service_image_path_opens_the_exact_subkey(monkeypatch) -> None:
+    opened: list[str] = []
+
+    class FakeKey:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc_info):
+            return False
+
+    fake = types.SimpleNamespace(
+        HKEY_LOCAL_MACHINE=object(),
+        KEY_READ=0x20019,
+        OpenKey=lambda root, sub, reserved, access: (
+            opened.append(sub),
+            FakeKey(),
+        )[1],
+        QueryValueEx=lambda key, name: ('"C:\\Windows\\Sysmon64.exe"', 1),
+    )
+    monkeypatch.setitem(sys.modules, "winreg", fake)
+    monkeypatch.setattr(sysmon_collect.sys, "platform", "win32")
+    result = sysmon_collect._service_image_path("Sysmon64")
+    assert opened == [sysmon_collect._service_key("Sysmon64")]
+    assert result.endswith("Sysmon64.exe")
+
+
+def test_auditpol_column_detection_ignores_trailing_empty_cells() -> None:
+    result = parse_auditpol_csv(
+        "auditpol /r",
+        (FIXTURES / "trailing_empty.csv").read_text(encoding="utf-8"),
+    )
+    assert result.determinacy == "effective"
+    assert result.gates[0].value == "success"
+
+
+def test_auditpol_cli_timeout_is_reported_as_collection_error(
+    monkeypatch,
+) -> None:
+    def hang(*args, **kwargs):
+        raise subprocess.TimeoutExpired(cmd="auditpol", timeout=15)
+
+    monkeypatch.setattr(auditpol_cli.sys, "platform", "win32")
+    monkeypatch.setattr(auditpol_cli.subprocess, "run", hang)
+    collection = auditpol_cli.collect_cli_policy()
+    assert collection.parsed is None
+    assert collection.error is not None
+    assert "auditpol" in collection.error.resource
+
+
+def test_leading_empty_value_row_is_still_reported() -> None:
+    result = parse_auditpol_csv(
+        "auditpol /r",
+        (FIXTURES / "leading_empty_value.csv").read_text(encoding="utf-8"),
+    )
+    gates = {gate.key: gate.value for gate in result.gates}
+    assert gates["windows.audit.{11111111-2222-3333-4444-555555555555}"] == "unknown"
+    assert gates["windows.audit.{0CCE922B-69AE-11D9-BED3-505054503030}"] == "success"
+    assert result.determinacy == "unknown"

@@ -99,12 +99,16 @@ def _service_state(name: str) -> tuple[bool | None, bool, str | None]:
         advapi32.CloseServiceHandle(scm)
 
 
+def _service_key(name: str) -> str:
+    return rf"SYSTEM\CurrentControlSet\Services\{name}"
+
+
 def _service_image_path(name: str) -> str | None:
     if sys.platform != "win32":
         return None
     import winreg
 
-    path = rf"SYSTEM\\CurrentControlSet\\Services\\{name}"
+    path = _service_key(name)
     try:
         with winreg.OpenKey(
             winreg.HKEY_LOCAL_MACHINE,

@@ -17,7 +17,9 @@ _STATES = {
     "3": "both",
     "": "unknown",
 }
-_SETTING_VALUES = frozenset(_STATES) | {"0"}
+# An empty cell is a valid per-row state but must not anchor column
+# detection, or a trailing empty column would be read as the value column.
+_SETTING_VALUES = (frozenset(_STATES) - {""}) | {"0"}
 
 
 def _canonical_guid(value: str) -> str:
@@ -29,6 +31,7 @@ def parse_auditpol_csv(source_id: str, data: str | bytes) -> ParseResult:
     text = data.decode("oem", "replace") if isinstance(data, bytes) else data
     rows = list(csv.reader(StringIO(text)))
     first_data_index: int | None = None
+    first_guid_index: int | None = None
     guid_index: int | None = None
     setting_index: int | None = None
 
@@ -41,12 +44,14 @@ def parse_auditpol_csv(source_id: str, data: str | bytes) -> ParseResult:
         if not candidates:
             continue
         guid_index = candidates[0]
+        if first_guid_index is None:
+            first_guid_index = row_index
         for index in range(len(row) - 1, -1, -1):
             if index != guid_index and row[index].strip() in _SETTING_VALUES:
                 setting_index = index
                 break
         if setting_index is not None:
-            first_data_index = row_index
+            first_data_index = first_guid_index
             break
 
     if first_data_index is None or guid_index is None or setting_index is None:

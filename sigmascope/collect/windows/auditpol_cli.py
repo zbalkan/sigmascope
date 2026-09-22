@@ -9,6 +9,9 @@ from sigmascope.model import ParseResult
 from sigmascope.parse.auditpol_csv import parse_auditpol_csv
 
 
+_TIMEOUT_SECONDS = 15
+
+
 @dataclass(frozen=True)
 class AuditpolCliCollection:
     parsed: ParseResult | None
@@ -31,8 +34,9 @@ def collect_cli_policy() -> AuditpolCliCollection:
             check=False,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
+            timeout=_TIMEOUT_SECONDS,
         )
-    except OSError as exc:
+    except (OSError, subprocess.TimeoutExpired) as exc:
         return AuditpolCliCollection(
             None,
             CollectionError(
